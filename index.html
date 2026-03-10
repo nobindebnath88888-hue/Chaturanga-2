@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chaturanga — Four Player Chess</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- LOBBY SCREEN -->
+  <div id="lobby-screen" class="screen active">
+    <div class="lobby-wrapper">
+      <div class="logo-area">
+        <div class="crown-icon">♛</div>
+        <h1 class="game-title">CHATURANGA</h1>
+        <p class="game-subtitle">Four Player • Two Teams • One Throne</p>
+      </div>
+      <div class="lobby-card">
+        <input type="text" id="player-name-input" placeholder="Enter your name..." maxlength="20"/>
+        <div class="color-select-label">Choose your color</div>
+        <div class="color-choices">
+          <div class="color-choice" data-color="red" style="--cc:#c0392b">
+            <div class="color-swatch"></div><span>Red</span>
+          </div>
+          <div class="color-choice" data-color="blue" style="--cc:#2471a3">
+            <div class="color-swatch"></div><span>Blue</span>
+          </div>
+          <div class="color-choice" data-color="green" style="--cc:#1e8449">
+            <div class="color-swatch"></div><span>Green</span>
+          </div>
+          <div class="color-choice" data-color="gold" style="--cc:#b7950b">
+            <div class="color-swatch"></div><span>Gold</span>
+          </div>
+        </div>
+        <div class="team-info-box">
+          <div class="team-block team-a">
+            <span class="team-label">⚔ TEAM A</span>
+            <span class="team-members">Red + Blue</span>
+          </div>
+          <div class="vs-divider">VS</div>
+          <div class="team-block team-b">
+            <span class="team-label">⚔ TEAM B</span>
+            <span class="team-members">Green + Gold</span>
+          </div>
+        </div>
+        <div class="room-section">
+          <input type="text" id="room-id-input" placeholder="Room ID (leave blank to create new)"/>
+          <button id="join-btn" class="btn-primary">Enter the Arena</button>
+        </div>
+        <div id="lobby-status" class="lobby-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div class="game-layout">
+
+      <!-- LEFT PANEL: Team Chat + Player Info -->
+      <div class="side-panel left-panel">
+        <div class="panel-header">
+          <span class="panel-icon">🛡</span>
+          <span>TEAM CHAT</span>
+          <span id="team-label-display" class="team-badge">—</span>
+        </div>
+        <div id="team-chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="team-chat-input" placeholder="Message your ally..." maxlength="200"/>
+          <button id="team-send-btn" class="send-btn">➤</button>
+        </div>
+        <div class="players-status">
+          <div class="players-title">Players</div>
+          <div id="players-list"></div>
+        </div>
+      </div>
+
+      <!-- CENTER: Board + Top/Bottom info -->
+      <div class="center-column">
+        <div class="top-opponent-area">
+          <div id="opponent-top" class="opponent-info"></div>
+          <div id="captured-top" class="captured-row"></div>
+        </div>
+
+        <div class="board-container">
+          <canvas id="game-canvas" width="640" height="640"></canvas>
+          <div id="promotion-modal" class="promotion-modal hidden">
+            <div class="promotion-inner">
+              <p>Promote Pawn to:</p>
+              <div id="promotion-choices"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-self-area">
+          <div id="captured-bottom" class="captured-row"></div>
+          <div id="self-info" class="self-info"></div>
+        </div>
+
+        <div class="turn-indicator">
+          <div id="turn-display">Waiting for players...</div>
+          <div id="check-display" class="check-alert hidden">CHECK!</div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: Public Chat + Game Log -->
+      <div class="side-panel right-panel">
+        <div class="panel-header">
+          <span class="panel-icon">📢</span>
+          <span>PUBLIC CHAT</span>
+        </div>
+        <div id="public-chat-messages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="public-chat-input" placeholder="Global message..." maxlength="200"/>
+          <button id="public-send-btn" class="send-btn">➤</button>
+        </div>
+        <div class="game-log-section">
+          <div class="players-title">Move Log</div>
+          <div id="move-log" class="move-log"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getDatabase, ref, set, get, push, onValue, update, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ========== FIREBASE CONFIG — REPLACE WITH YOUR OWN ==========
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  // =============================================================
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Make DB available globally
+  window._firebaseDB = db;
+  window._firebaseRef = ref;
+  window._firebaseSet = set;
+  window._firebaseGet = get;
+  window._firebasePush = push;
+  window._firebaseOnValue = onValue;
+  window._firebaseUpdate = update;
+  window._firebaseTimestamp = serverTimestamp;
+
+  // Boot the game engine after Firebase loads
+  import('./js/engine.js').then(m => m.boot());
+</script>
+
+</body>
+</html>
