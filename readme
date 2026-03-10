@@ -1,0 +1,81 @@
+# ♛ Chaturanga — Four Player Chess
+
+A browser-based, real-time **4-player team chess** game built on Firebase Realtime Database.
+
+## 🎯 Rules
+- **4 players**, **2 teams**: Red + Blue (Team A) vs Green + Gold (Team B)
+- Turn order: Red → Blue → Green → Gold → repeat
+- Standard chess rules apply per player
+- A player is eliminated when checkmated; their pieces remain on the board for their ally to consider
+- **Team wins** when both opponents are eliminated or the last king is captured
+
+## 🚀 Setup
+
+### 1. Firebase Project
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Create a new project
+3. Go to **Realtime Database** → Create database (start in test mode)
+4. Go to **Project Settings** → Add Web App → copy config
+
+### 2. Configure
+Open `index.html` and replace the Firebase config block:
+
+```javascript
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+```
+
+### 3. Database Rules
+In Firebase Console → Realtime Database → Rules, paste the contents of `firebase-rules.json`.
+
+### 4. Deploy to GitHub Pages
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/chaturanga4.git
+git push -u origin main
+```
+Then enable GitHub Pages under Settings → Pages → Branch: main.
+
+### 5. Embed in Google Sites
+Use the **Embed** widget with your GitHub Pages URL:
+`https://YOUR_USERNAME.github.io/chaturanga4/`
+
+## 📁 File Structure
+```
+index.html          ← Main entry point
+css/style.css       ← Dark navy + wooden board styles
+js/engine.js        ← Firebase sync, UI orchestration
+js/gamelogic.js     ← Chess rules, move generation
+js/renderer.js      ← Canvas board renderer
+js/pieces.js        ← SVG-style piece drawing
+firebase-rules.json ← Firebase security rules
+README.md
+```
+
+## 🎮 How to Play
+1. Open the URL and enter your name
+2. Select your color (Red/Blue = Team A, Green/Gold = Team B)
+3. Share the **Room ID** with your 3 friends
+4. Friends enter the same Room ID to join
+5. Game starts automatically when you interact — no waiting lobby needed
+6. Use **Team Chat** to strategize with your partner
+7. Use **Public Chat** to taunt your enemies 😄
+
+## 🔧 Hosting Note
+This game uses ES Modules (`type="module"`).  
+You **cannot** open `index.html` directly from the filesystem — use a local server:
+```bash
+npx serve .
+# or
+python3 -m http.server 8080
+```
