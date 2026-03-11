@@ -91,10 +91,16 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .ml{overflow-y:auto;font-size:10px;color:#7080a0;display:flex;flex-direction:column;gap:2px;font-family:'Cinzel',serif}
 .ml::-webkit-scrollbar{width:3px}
 .ml::-webkit-scrollbar-thumb{background:#1e3a6e;border-radius:2px}
-.le{padding:1px 0}
-.le.red{color:#e05050}.le.blue{color:#4090d0}.le.green{color:#40b060}.le.gold{color:#d09030}
+.le{padding:1px 0}.le.red{color:#e05050}.le.blue{color:#4090d0}.le.green{color:#40b060}.le.gold{color:#d09030}
 .legbox{border-top:1px solid rgba(180,140,50,.08);padding:6px 10px;flex-shrink:0}
-.legrow{font-family:'Cinzel',serif;font-size:9px;color:#506080;line-height:1.7}
+.legrow{font-family:'Cinzel',serif;font-size:9px;color:#506080;line-height:1.8}
+.turnorder{background:rgba(255,255,255,.03);border:1px solid rgba(180,140,50,.1);border-radius:6px;padding:6px 10px;margin:6px 10px;flex-shrink:0}
+.to-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;color:#506080;text-transform:uppercase;margin-bottom:4px}
+.to-row{display:flex;align-items:center;gap:4px;font-family:'Cinzel',serif;font-size:9px}
+.to-dot{width:7px;height:7px;border-radius:50%}
+.to-dot.red{background:#c0392b}.to-dot.blue{background:#2471a3}.to-dot.green{background:#1e8449}.to-dot.gold{background:#b7950b}
+.to-name{color:#7080a0}
+.to-sep{color:#506080;margin:0 2px}
 </style>
 </head>
 <body>
@@ -143,10 +149,22 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <div id="pl"></div>
      <div class="rid">Room: <span id="rs">&#8212;</span></div>
     </div>
+    <div class="turnorder">
+     <div class="to-title">Turn Order</div>
+     <div class="to-row">
+      <div class="to-dot red"></div><span class="to-name">Red</span>
+      <span class="to-sep">&#8594;</span>
+      <div class="to-dot green"></div><span class="to-name">Green</span>
+      <span class="to-sep">&#8594;</span>
+      <div class="to-dot blue"></div><span class="to-name">Blue</span>
+      <span class="to-sep">&#8594;</span>
+      <div class="to-dot gold"></div><span class="to-name">Gold</span>
+      <span class="to-sep">&#8594;</span><span class="to-name" style="color:#506080">repeat</span>
+     </div>
+    </div>
     <div class="legbox">
-     <div class="legrow">K = King &nbsp; E = Elephant (Rook)</div>
-     <div class="legrow">H = Horse (Knight) &nbsp; B = Boat (jumps 2&#9651;)</div>
-     <div class="legrow">P = Pawn</div>
+     <div class="legrow">K=King &nbsp; R=Rook &nbsp; N=Knight</div>
+     <div class="legrow">B=Bishop &nbsp; Q=Queen (promoted) &nbsp; P=Pawn</div>
     </div>
    </div>
 
@@ -196,14 +214,24 @@ const FB={
   appId:"1:223844496743:web:f0bf0516827021bb606bc2"
 };
 
-// ── Constants ────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────
 const COLORS=['red','blue','green','gold'];
 const TEAMS={red:'A',blue:'A',green:'B',gold:'B'};
+
+// Turn order alternates teams: Red(A) → Green(B) → Blue(A) → Gold(B) → repeat
+// Index into this array gives turn order, skipping eliminated players
+const TURN_ORDER=['red','green','blue','gold'];
+
 const PAWN_DIR  ={red:-1,blue:-1,green:1,gold:1};
 const PAWN_PROMO={red:0,  blue:0, green:7,gold:7};
+const PAWN_START={red:6,  blue:6, green:1,gold:1};
 
-// ── Piece colors ─────────────────────────────────────────────────
-const PC={
+// King starting squares for castling reference
+// Red: King at (7,3), Rooks at (7,0) [already Boat] and... wait —
+// Actually we're using standard chess pieces now: K, R, N, B, Bo(Boat), P
+// Per the user's request: Rook = standard rook power + castling, standard promotions
+
+const PIECE_COLORS={
   red:  {base:'#c0392b',dark:'#6e1a12',mid:'#e74c3c',hi:'#f5b7b1',rim:'#3a0a06'},
   blue: {base:'#1a6aad',dark:'#0c3660',mid:'#2e86c1',hi:'#a9cce3',rim:'#061830'},
   green:{base:'#1a7a3c',dark:'#0d4022',mid:'#229954',hi:'#a9dfbf',rim:'#041808'},
@@ -211,32 +239,73 @@ const PC={
 };
 
 // ── Board Setup ───────────────────────────────────────────────────
-// Chaturaji starting positions:
-//   Red  (bottom-left):  row7=B H E K (cols 0-3), row6=pawns (cols 0-3)
-//   Blue (bottom-right): row7=K E H B (cols 4-7), row6=pawns (cols 4-7)
-//   Green(top-right):    row0=K E H B (cols 4-7), row1=pawns (cols 4-7)
-//   Gold (top-left):     row0=B H E K (cols 0-3), row1=pawns (cols 0-3)
-// Pawns: Red/Blue move toward row 0; Green/Gold move toward row 7
+// Pieces per player: R=Rook, N=Knight, B=Bishop, K=King, P=Pawn
+// No Boat piece — user wants standard chess pieces + castling + standard promotion
+//
+// Layout (each player owns a 4-wide corner):
+//   Red   (bottom-left):  row7 cols 0-3 = R N B K,  row6 cols 0-3 = P P P P
+//   Blue  (bottom-right): row7 cols 4-7 = K B N R,  row6 cols 4-7 = P P P P
+//   Green (top-right):    row0 cols 4-7 = K B N R,  row1 cols 4-7 = P P P P
+//   Gold  (top-left):     row0 cols 0-3 = R N B K,  row1 cols 0-3 = P P P P
+//
+// Allied kings (Red+Blue) are on OPPOSITE sides of centre — NOT adjacent.
+// Red King at (7,3), Blue King at (7,4) — they ARE adjacent at start.
+// To avoid this, mirror Blue's layout: Blue row7 = K B N R  (K at col4, R at col7)
+// and Red row7 = R N B K (K at col3, R at col0). Kings at cols 3 and 4 — still adjacent!
+// Solution: put each team's kings on the outer edge of their half:
+//   Red   row7: K B N R  → K at col0, R at col3   (King on the far-left)
+//   Blue  row7: R N B K  → R at col4, K at col7   (King on the far-right)
+//   Green row0: R N B K  → R at col4, K at col7   (mirror of Blue)
+//   Gold  row0: K B N R  → K at col0, R at col3   (mirror of Red)
+// Now Red King col0, Blue King col7 — far apart. Allied kings won't be adjacent.
+// Castling: each king moves 2 toward its Rook (king-side = toward center in this layout)
 function initBoard(){
   const b=Array(64).fill(null);
   const P=(r,c,t,co)=>{b[r*8+c]={type:t,color:co}};
-  P(7,0,'B','red'); P(7,1,'H','red'); P(7,2,'E','red'); P(7,3,'K','red');
-  for(let c=0;c<4;c++)P(6,c,'P','red');
-  P(7,4,'K','blue'); P(7,5,'E','blue'); P(7,6,'H','blue'); P(7,7,'B','blue');
-  for(let c=4;c<8;c++)P(6,c,'P','blue');
-  P(0,4,'K','green'); P(0,5,'E','green'); P(0,6,'H','green'); P(0,7,'B','green');
-  for(let c=4;c<8;c++)P(1,c,'P','green');
-  P(0,3,'K','gold'); P(0,2,'E','gold'); P(0,1,'H','gold'); P(0,0,'B','gold');
-  for(let c=0;c<4;c++)P(1,c,'P','gold');
+  // Red bottom-left: King at (7,0), Rook at (7,3)
+  P(7,0,'K','red'); P(7,1,'B','red'); P(7,2,'N','red'); P(7,3,'R','red');
+  for(let c=0;c<4;c++) P(6,c,'P','red');
+  // Blue bottom-right: Rook at (7,4), King at (7,7)
+  P(7,4,'R','blue'); P(7,5,'N','blue'); P(7,6,'B','blue'); P(7,7,'K','blue');
+  for(let c=4;c<8;c++) P(6,c,'P','blue');
+  // Green top-right: Rook at (0,4), King at (0,7)
+  P(0,4,'R','green'); P(0,5,'N','green'); P(0,6,'B','green'); P(0,7,'K','green');
+  for(let c=4;c<8;c++) P(1,c,'P','green');
+  // Gold top-left: King at (0,0), Rook at (0,3)
+  P(0,0,'K','gold'); P(0,1,'B','gold'); P(0,2,'N','gold'); P(0,3,'R','gold');
+  for(let c=0;c<4;c++) P(1,c,'P','gold');
   return b;
 }
 
-// ── Game Logic ────────────────────────────────────────────────────
-function gp(b,r,c){if(r<0||r>7||c<0||c>7)return undefined;return b[r*8+c]||null}
-function isFriend(p,col){return!!p&&p.color===col}
-function isEnemy(p,col) {return!!p&&p.color!==col}
+// Castling rights per color: K=king-side (toward centre), Q=queen-side (away from centre)
+// Given the layout above:
+//   Red:   King at col0, Rook at col3 — castling moves king RIGHT (king-side, toward rook)
+//   Blue:  King at col7, Rook at col4 — castling moves king LEFT  (king-side, toward rook)
+//   Green: King at col7, Rook at col4 — castling moves king LEFT  (king-side, toward rook)
+//   Gold:  King at col0, Rook at col3 — castling moves king RIGHT (king-side, toward rook)
+// We track a single 'K' flag per color meaning "king-side rook castling available"
+function initCastlingRights(){
+  const cr={};
+  COLORS.forEach(c=>cr[c]={K:true,Q:false});
+  return cr;
+}
 
-function genMoves(board,row,col,color){
+// ── Game Logic ────────────────────────────────────────────────────
+function gp(b,r,c){
+  if(r<0||r>7||c<0||c>7)return undefined;
+  return b[r*8+c]||null;
+}
+// _elimSet tracks eliminated colors so their pieces are capturable by anyone incl. allies
+let _elimSet=new Set();
+function isFriend(p,col){
+  if(!p)return false;
+  if(p.color===col)return true;                  // own pieces always blocked
+  if(_elimSet.has(p.color))return false;          // eliminated pieces = capturable by all
+  return TEAMS[p.color]===TEAMS[col];             // living teammate = friend (can't capture)
+}
+function isEnemy(p,col){return!!p&&!isFriend(p,col)}
+
+function genMoves(board,row,col,color,cr){
   const pc=gp(board,row,col);
   if(!pc||pc.color!==color)return[];
   const mv=[];
@@ -254,44 +323,93 @@ function genMoves(board,row,col,color){
   const step=(dr,dc)=>{
     const tr=row+dr,tc=col+dc;
     if(tr<0||tr>7||tc<0||tc>7)return;
-    const t=gp(board,tr,tc);
-    if(!isFriend(t,color))mv.push({from:[row,col],to:[tr,tc],capture:!!t});
+    if(!isFriend(gp(board,tr,tc),color))
+      mv.push({from:[row,col],to:[tr,tc],capture:!!gp(board,tr,tc)});
   };
 
   if(pc.type==='P'){
     const dir=PAWN_DIR[color];
     const tr=row+dir;
-    if(tr>=0&&tr<=7&&!gp(board,tr,col)){
-      mv.push({from:[row,col],to:[tr,col],capture:false,promo:tr===PAWN_PROMO[color]});
+    if(tr>=0&&tr<=7){
+      if(!gp(board,tr,col)){
+        mv.push({from:[row,col],to:[tr,col],capture:false,promo:tr===PAWN_PROMO[color]});
+        // Double push from starting rank
+        if(row===PAWN_START[color]){
+          const tr2=row+dir*2;
+          if(tr2>=0&&tr2<=7&&!gp(board,tr2,col))
+            mv.push({from:[row,col],to:[tr2,col],capture:false,promo:false,doublePush:true});
+        }
+      }
+      [-1,1].forEach(dc=>{
+        if(col+dc<0||col+dc>7)return;
+        const t=gp(board,tr,col+dc);
+        if(t&&isEnemy(t,color))
+          mv.push({from:[row,col],to:[tr,col+dc],capture:true,promo:tr===PAWN_PROMO[color]});
+      });
     }
-    [-1,1].forEach(dc=>{
-      if(col+dc<0||col+dc>7)return;
-      const t=gp(board,tr,col+dc);
-      if(t&&isEnemy(t,color))mv.push({from:[row,col],to:[tr,col+dc],capture:true,promo:tr===PAWN_PROMO[color]});
-    });
   }
-  else if(pc.type==='E'){[[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>slide(dr,dc));}
-  else if(pc.type==='H'){[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc])=>step(dr,dc));}
+  else if(pc.type==='R'){
+    [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>slide(dr,dc));
+  }
+  else if(pc.type==='N'){
+    [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc])=>step(dr,dc));
+  }
   else if(pc.type==='B'){
-    // Boat: jumps exactly 2 squares diagonally (can leap)
+    [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));
+  }
+  else if(pc.type==='Q'){
+    [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));
+  }
+  else if(pc.type==='Bo'){
+    // Boat: jumps exactly 2 squares diagonally, can leap over pieces
     [[-2,-2],[-2,2],[2,-2],[2,2]].forEach(([dr,dc])=>{
       const tr=row+dr,tc=col+dc;
       if(tr<0||tr>7||tc<0||tc>7)return;
-      const t=gp(board,tr,tc);
-      if(!isFriend(t,color))mv.push({from:[row,col],to:[tr,tc],capture:!!t});
+      if(!isFriend(gp(board,tr,tc),color))
+        mv.push({from:[row,col],to:[tr,tc],capture:!!gp(board,tr,tc)});
     });
   }
-  else if(pc.type==='K'){[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>step(dr,dc));}
+  else if(pc.type==='K'){
+    [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>step(dr,dc));
+    // Castling: king moves 2 squares toward the rook
+    // Red/Gold: King on left (col0 or col0), Rook toward right (col3) — king moves RIGHT (+col)
+    // Blue/Green: King on right (col7), Rook toward left (col4) — king moves LEFT (-col)
+    if(cr&&cr[color]&&cr[color].K){
+      const dir=(color==='red'||color==='gold')?1:-1; // +1 = right, -1 = left
+      const sq1=col+dir, sq2=col+dir*2, rookCol=col+dir*3;
+      const inBounds=(c)=>c>=0&&c<=7;
+      if(inBounds(sq1)&&inBounds(sq2)&&inBounds(rookCol)){
+        const rook=gp(board,row,rookCol);
+        if(rook&&rook.type==='R'&&rook.color===color&&!gp(board,row,sq1)&&!gp(board,row,sq2))
+          mv.push({from:[row,col],to:[row,sq2],castle:'K',rookFrom:[row,rookCol],rookTo:[row,sq1]});
+      }
+    }
+  }
   return mv;
 }
 
-function applyMove(board,move,promo='E'){
+function applyMove(board,move,promo='Q'){
   const nb=[...board];
   const[fr,fc]=move.from,[tr,tc]=move.to;
   const pc=nb[fr*8+fc];
   nb[fr*8+fc]=null;
+  // Handle castling: move rook using stored rookFrom/rookTo
+  if(move.castle&&move.rookFrom&&move.rookTo){
+    const[rfr,rfc]=move.rookFrom,[rtr,rtc]=move.rookTo;
+    nb[rtr*8+rtc]=nb[rfr*8+rfc];
+    nb[rfr*8+rfc]=null;
+  }
   nb[tr*8+tc]=move.promo?{type:promo,color:pc.color}:pc;
   return nb;
+}
+
+function updateCR(cr,move,board){
+  const n={};COLORS.forEach(c=>n[c]={K:!!(cr&&cr[c]&&cr[c].K),Q:!!(cr&&cr[c]&&cr[c].Q)});
+  const[fr,fc]=move.from;const p=board[fr*8+fc];
+  if(!p)return n;
+  if(p.type==='K')n[p.color]={K:false,Q:false};
+  if(p.type==='R'){if(fc>4)n[p.color].K=false;else n[p.color].Q=false;}
+  return n;
 }
 
 function isKingAlive(board,color){
@@ -299,22 +417,30 @@ function isKingAlive(board,color){
   return false;
 }
 
-function isKingUnderAttack(board,color){
+// Check if a color's king is under attack by ENEMIES ONLY (not allies)
+// Uses isFriend() which already accounts for eliminated pieces
+function isInCheck(board,color){
   let kr=-1,kc=-1;
   for(let i=0;i<64;i++){const p=board[i];if(p&&p.type==='K'&&p.color===color){kr=Math.floor(i/8);kc=i%8;break;}}
   if(kr===-1)return false;
   for(let i=0;i<64;i++){
-    const p=board[i];if(!p||p.color===color)continue;
+    const p=board[i];
+    if(!p)continue;
+    // Skip own pieces and living teammates — only enemies and eliminated-team's pieces can give check
+    // Actually: check = an OPPOSING team's living piece attacks the king
+    // Eliminated players' pieces are "neutral" — they can't give check since they have no turn
+    if(p.color===color)continue;                        // own piece
+    if(_elimSet.has(p.color))continue;                  // eliminated — no check
+    if(TEAMS[p.color]===TEAMS[color])continue;          // living teammate — no check
     const er=Math.floor(i/8),ec=i%8;
-    if(genMoves(board,er,ec,p.color).some(m=>m.to[0]===kr&&m.to[1]===kc))return true;
+    if(genMoves(board,er,ec,p.color,null).some(m=>m.to[0]===kr&&m.to[1]===kc))return true;
   }
   return false;
 }
 
 function sqName(r,c){return String.fromCharCode(97+c)+(8-r)}
 
-// ── Board/State Deserialization ────────────────────────────────────
-// Firebase may store arrays as objects or strip trailing nulls
+// ── Deserialization ───────────────────────────────────────────────
 function deserBoard(raw){
   const b=Array(64).fill(null);
   if(!raw)return b;
@@ -327,15 +453,18 @@ function deserElim(raw){
   if(Array.isArray(raw))return raw.filter(Boolean);
   return Object.values(raw).filter(Boolean);
 }
+function deserCR(raw){
+  const n={};
+  COLORS.forEach(c=>{
+    const s=raw&&raw[c]?raw[c]:{};
+    n[c]={K:!!(s.K||s.kingSide),Q:!!(s.Q||s.queenSide)};
+  });
+  return n;
+}
 
 // ── Board View Transforms ─────────────────────────────────────────
-// Each player's back rank is shown at the bottom of the display.
-// Red  (back rank row 7, cols 0-3): no transform needed
-// Blue (back rank row 7, cols 4-7): mirror horizontally (display col = 7-board col)
-// Green(back rank row 0, cols 4-7): rotate 180° (display = 7-r, 7-c)
-// Gold (back rank row 0, cols 0-3): flip vertically (display row = 7-board row)
-//
-// boardToDisplay(boardRow, boardCol, perspective) → [displayRow, displayCol]
+// b2d: board coords → display coords for given perspective
+// d2b: display coords → board coords
 function b2d(r,c,p){
   if(p==='red')   return [r,   c  ];
   if(p==='blue')  return [r,   7-c];
@@ -343,7 +472,6 @@ function b2d(r,c,p){
   if(p==='gold')  return [7-r, c  ];
   return [r,c];
 }
-// displayToBoard(displayRow, displayCol, perspective) → [boardRow, boardCol]
 function d2b(dr,dc,p){
   if(p==='red')   return [dr,   dc  ];
   if(p==='blue')  return [dr,   7-dc];
@@ -353,61 +481,58 @@ function d2b(dr,dc,p){
 }
 
 // ── Piece Drawing ─────────────────────────────────────────────────
-function lgrad(ctx,c,y0,y1){
-  const g=ctx.createLinearGradient(0,y0,0,y1);
-  g.addColorStop(0,c.hi);g.addColorStop(.35,c.mid);g.addColorStop(.72,c.base);g.addColorStop(1,c.dark);
-  return g;
-}
-function rgrad(ctx,c,radius){
-  const g=ctx.createRadialGradient(-radius*.3,-radius*.3,radius*.06,0,0,radius*1.1);
-  g.addColorStop(0,c.hi);g.addColorStop(.42,c.mid);g.addColorStop(1,c.rim);
-  return g;
-}
-function rrect(ctx,x,y,w,h,r){
-  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);
-  ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
-}
+function lg(ctx,c,y0,y1){const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,c.hi);g.addColorStop(.35,c.mid);g.addColorStop(.72,c.base);g.addColorStop(1,c.dark);return g;}
+function rg(ctx,c,radius){const g=ctx.createRadialGradient(-radius*.3,-radius*.3,radius*.06,0,0,radius*1.1);g.addColorStop(0,c.hi);g.addColorStop(.42,c.mid);g.addColorStop(1,c.rim);return g;}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
 
 function drawBase(ctx,c,s){
   ctx.beginPath();ctx.ellipse(0,s*.84,s*.52,s*.13,0,0,Math.PI*2);ctx.fillStyle=c.dark;ctx.fill();
-  ctx.beginPath();ctx.ellipse(0,s*.74,s*.45,s*.10,0,0,Math.PI*2);ctx.fillStyle=lgrad(ctx,c,s*.62,s*.84);ctx.fill();
+  ctx.beginPath();ctx.ellipse(0,s*.74,s*.45,s*.10,0,0,Math.PI*2);ctx.fillStyle=lg(ctx,c,s*.62,s*.84);ctx.fill();
 }
 
 function drawPawn_(ctx,c,s){
   drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.17,s*.66);ctx.bezierCurveTo(-s*.22,s*.3,-s*.14,-.1,0,-.1*s);ctx.bezierCurveTo(s*.14,-.1*s,s*.22,s*.3,s*.17,s*.66);ctx.closePath();
-  ctx.fillStyle=lgrad(ctx,c,-s*.1,s*.66);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.arc(0,-s*.36,s*.32,0,Math.PI*2);ctx.fillStyle=rgrad(ctx,c,s*.32);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-s*.17,s*.66);ctx.bezierCurveTo(-s*.22,s*.3,-s*.14,-s*.1,0,-s*.1);ctx.bezierCurveTo(s*.14,-s*.1,s*.22,s*.3,s*.17,s*.66);ctx.closePath();
+  ctx.fillStyle=lg(ctx,c,-s*.1,s*.66);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-s*.36,s*.32,0,Math.PI*2);ctx.fillStyle=rg(ctx,c,s*.32);ctx.fill();ctx.stroke();
   ctx.beginPath();ctx.arc(-s*.1,-s*.48,s*.11,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.26)';ctx.fill();
 }
 
-function drawEleph(ctx,c,s){
+function drawRook_(ctx,c,s){
   drawBase(ctx,c,s);
-  rrect(ctx,-s*.32,s*.2,s*.64,s*.52,s*.07);ctx.fillStyle=lgrad(ctx,c,s*.2,s*.72);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  rrect(ctx,-s*.36,-s*.1,s*.72,s*.32,s*.06);ctx.fillStyle=lgrad(ctx,c,-s*.1,s*.22);ctx.fill();ctx.stroke();
-  [-s*.28,-s*.09,s*.10].forEach(x=>{rrect(ctx,x,-s*.44,s*.15,s*.36,s*.04);ctx.fillStyle=lgrad(ctx,c,-s*.44,-s*.08);ctx.fill();ctx.stroke();});
-  ctx.beginPath();ctx.moveTo(-s*.3,-s*.08);ctx.bezierCurveTo(-s*.45,s*.06,-s*.44,s*.24,-s*.28,s*.26);ctx.strokeStyle=c.hi;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(s*.3,-s*.08);ctx.bezierCurveTo(s*.45,s*.06,s*.44,s*.24,s*.28,s*.26);ctx.stroke();
+  rr(ctx,-s*.32,s*.2,s*.64,s*.52,s*.07);ctx.fillStyle=lg(ctx,c,s*.2,s*.72);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  rr(ctx,-s*.36,-s*.1,s*.72,s*.32,s*.06);ctx.fillStyle=lg(ctx,c,-s*.1,s*.22);ctx.fill();ctx.stroke();
+  [-s*.28,-s*.09,s*.10].forEach(x=>{rr(ctx,x,-s*.44,s*.15,s*.36,s*.04);ctx.fillStyle=lg(ctx,c,-s*.44,-s*.08);ctx.fill();ctx.stroke();});
+  ctx.beginPath();ctx.moveTo(-s*.28,-s*.08);ctx.bezierCurveTo(-s*.44,s*.06,-s*.44,s*.24,-s*.28,s*.26);ctx.strokeStyle=c.hi;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(s*.28,-s*.08);ctx.bezierCurveTo(s*.44,s*.06,s*.44,s*.24,s*.28,s*.26);ctx.stroke();
   ctx.beginPath();ctx.ellipse(-s*.1,s*.05,s*.05,s*.24,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.17)';ctx.fill();
 }
 
-function drawHorse(ctx,c,s){
+function drawKnight_(ctx,c,s){
   drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.22,s*.63);ctx.lineTo(-s*.22,-.04*s);ctx.bezierCurveTo(-s*.28,-s*.24,-s*.1,-s*.56,s*.12,-s*.68);ctx.bezierCurveTo(s*.34,-s*.68,s*.42,-s*.5,s*.38,-s*.26);ctx.bezierCurveTo(s*.36,-s*.08,s*.24,.06*s,s*.22,s*.63);ctx.closePath();
-  ctx.fillStyle=lgrad(ctx,c,-s*.68,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-s*.22,s*.63);ctx.lineTo(-s*.22,-s*.04);ctx.bezierCurveTo(-s*.28,-s*.24,-s*.1,-s*.56,s*.12,-s*.68);ctx.bezierCurveTo(s*.34,-s*.68,s*.42,-s*.5,s*.38,-s*.26);ctx.bezierCurveTo(s*.36,-s*.08,s*.24,s*.06,s*.22,s*.63);ctx.closePath();
+  ctx.fillStyle=lg(ctx,c,-s*.68,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
   ctx.beginPath();ctx.moveTo(-s*.18,-s*.08);ctx.bezierCurveTo(-s*.38,-s*.16,-s*.42,-s*.58,-s*.2,-s*.74);ctx.bezierCurveTo(0,-s*.9,s*.32,-s*.8,s*.32,-s*.54);ctx.bezierCurveTo(s*.32,-s*.32,s*.18,-s*.14,s*.08,-s*.08);ctx.closePath();
-  ctx.fillStyle=rgrad(ctx,c,s*.5);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.fillStyle=rg(ctx,c,s*.5);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
   ctx.beginPath();ctx.arc(-s*.04,-s*.54,s*.055,0,Math.PI*2);ctx.fillStyle=c.rim;ctx.fill();
   ctx.beginPath();ctx.arc(-s*.02,-s*.54,s*.028,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
   ctx.beginPath();ctx.arc(s*.18,-s*.34,s*.032,0,Math.PI*2);ctx.fillStyle=c.dark;ctx.fill();
   ctx.beginPath();ctx.ellipse(-s*.09,-s*.42,s*.055,s*.13,-.5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();
 }
 
-function drawBoat(ctx,c,s){
+function drawBishop_(ctx,c,s){
+  drawBase(ctx,c,s);
+  ctx.beginPath();ctx.moveTo(-s*.3,s*.62);ctx.bezierCurveTo(-s*.38,s*.3,-s*.28,-s*.1,-s*.1,-s*.38);ctx.bezierCurveTo(-s*.05,-s*.44,s*.05,-s*.44,s*.1,-s*.38);ctx.bezierCurveTo(s*.28,-s*.1,s*.38,s*.3,s*.3,s*.62);ctx.closePath();
+  ctx.fillStyle=lg(ctx,c,-s*.44,s*.62);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-s*.52,s*.2,0,Math.PI*2);ctx.fillStyle=rg(ctx,c,s*.2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-s*.07,-s*.68);ctx.lineTo(0,-s*.96);ctx.lineTo(s*.07,-s*.68);ctx.fillStyle=c.mid;ctx.fill();
+  ctx.beginPath();ctx.ellipse(-s*.08,-s*.1,s*.05,s*.22,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.2)';ctx.fill();
+}
+
+function drawBoat_(ctx,c,s){
   drawBase(ctx,c,s);
   ctx.beginPath();ctx.moveTo(-s*.5,s*.3);ctx.bezierCurveTo(-s*.55,s*.08,-s*.4,-s*.16,0,-s*.2);ctx.bezierCurveTo(s*.4,-s*.16,s*.55,s*.08,s*.5,s*.3);ctx.bezierCurveTo(s*.45,s*.56,-s*.45,s*.56,-s*.5,s*.3);ctx.closePath();
-  ctx.fillStyle=lgrad(ctx,c,-s*.2,s*.56);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.fillStyle=lg(ctx,c,-s*.2,s*.56);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
   ctx.beginPath();ctx.moveTo(-s*.44,s*.18);ctx.lineTo(s*.44,s*.18);ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=s*.04;ctx.stroke();
   ctx.beginPath();ctx.moveTo(0,s*.14);ctx.lineTo(0,-s*.72);ctx.strokeStyle=c.mid;ctx.lineWidth=s*.06;ctx.stroke();
   ctx.beginPath();ctx.moveTo(0,-s*.66);ctx.bezierCurveTo(s*.5,-s*.54,s*.48,-s*.18,0,-s*.04);ctx.closePath();
@@ -415,19 +540,31 @@ function drawBoat(ctx,c,s){
   ctx.beginPath();ctx.ellipse(-s*.18,s*.05,s*.06,s*.2,-.35,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill();
 }
 
+function drawQueen_(ctx,c,s){
+  drawBase(ctx,c,s);
+  ctx.beginPath();ctx.moveTo(-s*.44,s*.63);ctx.bezierCurveTo(-s*.52,s*.3,-s*.38,-s*.05,-s*.18,-s*.28);ctx.bezierCurveTo(-s*.1,-s*.34,s*.1,-s*.34,s*.18,-s*.28);ctx.bezierCurveTo(s*.38,-s*.05,s*.52,s*.3,s*.44,s*.63);ctx.closePath();
+  ctx.fillStyle=lg(ctx,c,-s*.28,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.beginPath();ctx.ellipse(0,-s*.32,s*.28,s*.08,0,0,Math.PI*2);ctx.fillStyle=lg(ctx,c,-s*.4,-s*.24);ctx.fill();ctx.stroke();
+  [-s*.26,-s*.13,0,s*.13,s*.26].forEach((x,i)=>{
+    const h=[s*.82,s*.7,s*.78,s*.7,s*.82][i];
+    ctx.beginPath();ctx.arc(x,-s*.32-h*.36,s*.1,0,Math.PI*2);
+    ctx.fillStyle=rg(ctx,c,s*.1);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  });
+  ctx.beginPath();ctx.arc(0,-s*.32-s*.78*.36,s*.06,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
+  ctx.beginPath();ctx.ellipse(-s*.14,s*.1,s*.06,s*.22,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill();
+}
+
 function drawKing_(ctx,c,s){
   drawBase(ctx,c,s);
   ctx.beginPath();ctx.moveTo(-s*.42,s*.63);ctx.bezierCurveTo(-s*.5,s*.26,-s*.36,-s*.08,-s*.18,-s*.28);ctx.bezierCurveTo(-s*.1,-s*.34,s*.1,-s*.34,s*.18,-s*.28);ctx.bezierCurveTo(s*.36,-s*.08,s*.5,s*.26,s*.42,s*.63);ctx.closePath();
-  ctx.fillStyle=lgrad(ctx,c,-s*.28,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  rrect(ctx,-s*.32,-s*.5,s*.64,s*.22,s*.05);ctx.fillStyle=lgrad(ctx,c,-s*.5,-s*.28);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  ctx.fillStyle=lg(ctx,c,-s*.28,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
+  rr(ctx,-s*.32,-s*.5,s*.64,s*.22,s*.05);ctx.fillStyle=lg(ctx,c,-s*.5,-s*.28);ctx.fill();ctx.stroke();
   [-s*.22,0,s*.22].forEach((x,i)=>{
     const h=i===1?s*.56:s*.36;
-    rrect(ctx,x-s*.09,-s*.5-h,s*.18,h+s*.05,s*.04);
-    ctx.fillStyle=lgrad(ctx,c,-s*.5-h,-s*.28);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+    rr(ctx,x-s*.09,-s*.5-h,s*.18,h+s*.05,s*.04);
+    ctx.fillStyle=lg(ctx,c,-s*.5-h,-s*.28);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
   });
-  ctx.fillStyle=c.hi;
-  ctx.fillRect(-s*.04,-s*.5-s*.56-s*.05,s*.08,s*.3);
-  ctx.fillRect(-s*.14,-s*.5-s*.56+s*.06,s*.28,s*.08);
+  ctx.fillStyle=c.hi;ctx.fillRect(-s*.04,-s*.5-s*.56-s*.05,s*.08,s*.3);ctx.fillRect(-s*.14,-s*.5-s*.56+s*.06,s*.28,s*.08);
   [-s*.2,0,s*.2].forEach(x=>{
     ctx.beginPath();ctx.arc(x,-s*.39,s*.065,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
     ctx.beginPath();ctx.arc(x,-s*.39,s*.038,0,Math.PI*2);ctx.fillStyle=c.hi;ctx.fill();
@@ -436,104 +573,80 @@ function drawKing_(ctx,c,s){
 }
 
 function drawPiece(ctx,type,ck,cx,cy,sz){
-  const c=PC[ck];ctx.save();ctx.translate(cx,cy);
+  const c=PIECE_COLORS[ck];
+  ctx.save();ctx.translate(cx,cy);
   ctx.shadowColor='rgba(0,0,0,.58)';ctx.shadowBlur=sz*.1;ctx.shadowOffsetY=sz*.04;
   const s=sz*.42;
-  ({P:drawPawn_,E:drawEleph,H:drawHorse,B:drawBoat,K:drawKing_})[type]?.(ctx,c,s);
+  const D={P:drawPawn_,R:drawRook_,N:drawKnight_,B:drawBishop_,Q:drawQueen_,K:drawKing_};
+  if(D[type])D[type](ctx,c,s);
   ctx.restore();
 }
 
-// ── Board Renderer ─────────────────────────────────────────────────
+// ── Board Renderer ────────────────────────────────────────────────
 function renderBoard(ctx,board,selSq,legals,lastMv,checkSqs,persp){
   const S=80;
   ctx.clearRect(0,0,640,640);
-
   for(let dr=0;dr<8;dr++){
     for(let dc=0;dc<8;dc++){
       const[r,c]=d2b(dr,dc,persp);
-      // Base square color
       ctx.fillStyle=(dr+dc)%2===0?'#f0d9b5':'#b58863';
       ctx.fillRect(dc*S,dr*S,S,S);
-      // Last move
+      // Last move highlight
       if(lastMv){
         const[fr,fc]=lastMv.from,[tr,tc]=lastMv.to;
-        if((r===fr&&c===fc)||(r===tr&&c===tc)){ctx.fillStyle='rgba(205,185,0,.33)';ctx.fillRect(dc*S,dr*S,S,S);}
+        if((r===fr&&c===fc)||(r===tr&&c===tc)){ctx.fillStyle='rgba(205,185,0,.32)';ctx.fillRect(dc*S,dr*S,S,S);}
       }
-      // Check glow
+      // Check glow (enemy kings only)
       if(checkSqs){
-        for(const[cr,cc] of checkSqs){
-          if(r===cr&&c===cc){
+        for(const[cr2,cc2] of checkSqs){
+          if(r===cr2&&c===cc2){
             const g=ctx.createRadialGradient(dc*S+40,dr*S+40,0,dc*S+40,dr*S+40,56);
             g.addColorStop(0,'rgba(255,0,0,.6)');g.addColorStop(1,'rgba(255,0,0,0)');
             ctx.fillStyle=g;ctx.fillRect(dc*S,dr*S,S,S);
           }
         }
       }
-      // Selected square
+      // Selected
       if(selSq){
-        const[selDr,selDc]=b2d(selSq[0],selSq[1],persp);
-        if(dr===selDr&&dc===selDc){ctx.fillStyle='rgba(255,215,0,.5)';ctx.fillRect(dc*S,dr*S,S,S);}
+        const[sdr,sdc]=b2d(selSq[0],selSq[1],persp);
+        if(dr===sdr&&dc===sdc){ctx.fillStyle='rgba(255,215,0,.5)';ctx.fillRect(dc*S,dr*S,S,S);}
       }
-      // Legal move indicators
-      const hasLegal=legals.some(m=>{
-        const[tdr,tdc]=b2d(m.to[0],m.to[1],persp);
-        return dr===tdr&&dc===tdc;
-      });
+      // Legal move dots/rings
+      const hasLegal=legals.some(m=>{const[tdr,tdc]=b2d(m.to[0],m.to[1],persp);return dr===tdr&&dc===tdc;});
       if(hasLegal){
-        if(gp(board,r,c)){
-          ctx.strokeStyle='rgba(200,50,50,.6)';ctx.lineWidth=8;
-          ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,36,0,Math.PI*2);ctx.stroke();
-        }else{
-          ctx.fillStyle='rgba(0,0,0,.22)';
-          ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,14,0,Math.PI*2);ctx.fill();
-        }
+        if(gp(board,r,c)){ctx.strokeStyle='rgba(200,50,50,.6)';ctx.lineWidth=8;ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,36,0,Math.PI*2);ctx.stroke();}
+        else{ctx.fillStyle='rgba(0,0,0,.22)';ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,14,0,Math.PI*2);ctx.fill();}
       }
     }
   }
-
-  // Coordinate labels
-  ctx.shadowColor='transparent';ctx.shadowBlur=0;
-  ctx.font='bold 11px Cinzel,serif';
+  // Coordinates
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.font='bold 11px Cinzel,serif';
   for(let i=0;i<8;i++){
-    const isLight=i%2===0;
-    // Rank on left
+    const lt=i%2===0;
     const[bRow]=d2b(i,0,persp);
-    ctx.fillStyle=isLight?'rgba(100,60,15,.8)':'rgba(240,217,181,.8)';
-    ctx.textAlign='left';ctx.textBaseline='top';
-    ctx.fillText(8-bRow,i*S+3,i*S+2);
-    // File on bottom
+    ctx.fillStyle=lt?'rgba(100,60,15,.8)':'rgba(240,217,181,.8)';ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText(8-bRow,i*S+3,i*S+2);
     const[,bCol]=d2b(7,i,persp);
-    ctx.fillStyle=isLight?'rgba(240,217,181,.8)':'rgba(100,60,15,.8)';
-    ctx.textAlign='right';ctx.textBaseline='bottom';
-    ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
+    ctx.fillStyle=lt?'rgba(240,217,181,.8)':'rgba(100,60,15,.8)';ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
   }
-
-  // Draw pieces on top
-  for(let dr=0;dr<8;dr++){
-    for(let dc=0;dc<8;dc++){
-      const[r,c]=d2b(dr,dc,persp);
-      const p=gp(board,r,c);
-      if(p)drawPiece(ctx,p.type,p.color,dc*S+40,dr*S+40,S);
-    }
+  // Pieces
+  for(let dr=0;dr<8;dr++)for(let dc=0;dc<8;dc++){
+    const[r,c]=d2b(dr,dc,persp);const p=gp(board,r,c);
+    if(p)drawPiece(ctx,p.type,p.color,dc*S+40,dr*S+40,S);
   }
 }
 
-// ── App State ──────────────────────────────────────────────────────
+// ── App State ─────────────────────────────────────────────────────
 let db2,roomId,myColor,myName;
 let GS=null,selSq=null,legals=[],pendPromo=null;
 let perspective='red';
-let autoRotate=true; // auto-rotate to current player's view when it becomes your turn
 const stat=document.getElementById('stat');
 
 try{const app=initializeApp(FB);db2=getDatabase(app);}
 catch(e){stat.textContent='Firebase error: '+e.message;stat.style.color='#e74c3c';}
 
-// ── Lobby Setup ────────────────────────────────────────────────────
+// ── Lobby ─────────────────────────────────────────────────────────
 document.querySelectorAll('.cc').forEach(el=>{
-  el.addEventListener('click',()=>{
-    document.querySelectorAll('.cc').forEach(e=>e.classList.remove('sel'));
-    el.classList.add('sel');
-  });
+  el.addEventListener('click',()=>{document.querySelectorAll('.cc').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');});
 });
 document.querySelector('[data-color="red"]').classList.add('sel');
 document.getElementById('jb').addEventListener('click',doJoin);
@@ -553,9 +666,12 @@ async function doJoin(){
     const snap=await get(ref(db2,`rooms/${rid}`));
     if(!snap.exists()){
       await set(ref(db2,`rooms/${rid}`),{
-        board:initBoard(),currentTurn:'red',turnIndex:0,
-        eliminated:null,players:{[myColor]:{name:myName,online:true}},
-        lastMove:null,winner:null,createdAt:Date.now()
+        board:initBoard(),
+        currentTurn:'red',turnIndex:0,
+        castlingRights:initCastlingRights(),
+        eliminated:null,lastMove:null,winner:null,
+        players:{[myColor]:{name:myName,online:true}},
+        createdAt:Date.now()
       });
       setStat('Room created! Share ID: '+rid);
     }else{
@@ -564,47 +680,31 @@ async function doJoin(){
       await update(ref(db2,`rooms/${rid}/players/${myColor}`),{name:myName,online:true});
       setStat('Joined room '+rid+'!');
     }
-    roomId=rid;
-    setTimeout(enterGame,600);
-  }catch(err){
-    console.error(err);
-    setStat('Connection failed: '+err.message);
-    stat.style.color='#e74c3c';
-  }
+    roomId=rid;setTimeout(enterGame,600);
+  }catch(err){console.error(err);setStat('Failed: '+err.message);stat.style.color='#e74c3c';}
 }
 function setStat(m){stat.textContent=m;stat.style.color='#b8860b';}
 
-// ── Game Screen ────────────────────────────────────────────────────
+// ── Game Screen ───────────────────────────────────────────────────
 function enterGame(){
   document.getElementById('ls').classList.remove('active');
   const gs=document.getElementById('gs');gs.classList.add('active');gs.style.display='flex';
-
   const canvas=document.getElementById('gc');
-  fitCanvas(canvas);
-  window.addEventListener('resize',()=>fitCanvas(canvas));
-
+  fitCanvas(canvas);window.addEventListener('resize',()=>fitCanvas(canvas));
   perspective=myColor;
   document.getElementById('tld').textContent='TEAM '+TEAMS[myColor];
   document.getElementById('tld').style.color=TEAMS[myColor]==='A'?'#e05050':'#40b060';
   document.getElementById('rs').textContent=roomId;
   const si=document.getElementById('si');
-  si.textContent=myName+' ('+myColor+' · Team '+TEAMS[myColor]+')';
-  si.style.opacity='1';
+  si.textContent=myName+' ('+myColor+' · Team '+TEAMS[myColor]+')';si.style.opacity='1';
   si.style.color=({red:'#e74c3c',blue:'#3498db',green:'#27ae60',gold:'#f39c12'})[myColor];
-
   setupChat();
-
   canvas.addEventListener('click',handleClick);
   canvas.addEventListener('contextmenu',e=>{e.preventDefault();selSq=null;legals=[];paint();});
-
-  // Rotate button cycles through all 4 perspectives
   document.getElementById('rotbtn').addEventListener('click',()=>{
-    const i=COLORS.indexOf(perspective);
-    perspective=COLORS[(i+1)%4];
-    selSq=null;legals=[];
-    paint();
+    const i=COLORS.indexOf(perspective);perspective=COLORS[(i+1)%4];
+    selSq=null;legals=[];paint();
   });
-
   listenGame();listenChats();listenLog();
 }
 
@@ -617,23 +717,23 @@ function paint(){
   if(!GS)return;
   const ctx=document.getElementById('gc').getContext('2d');
   const board=GS.board;
-  // Mark king squares under attack
+  const elim=GS.eliminated||[];
+  // Check display: only show check for non-eliminated kings attacked by ENEMIES
   const checkSqs=[];
-  COLORS.filter(col=>!(GS.eliminated||[]).includes(col)).forEach(col=>{
-    if(isKingUnderAttack(board,col)){
+  COLORS.filter(col=>!elim.includes(col)).forEach(col=>{
+    if(isInCheck(board,col)){
       for(let i=0;i<64;i++){const p=board[i];if(p&&p.type==='K'&&p.color===col){checkSqs.push([Math.floor(i/8),i%8]);break;}}
     }
   });
   renderBoard(ctx,board,selSq,legals,GS.lastMove||null,checkSqs,perspective);
-  // Glow canvas border with current turn's color
   const ct=GS.currentTurn;
   const glow={red:'#c0392b55',blue:'#2471a355',green:'#1e844955',gold:'#b7950b55'};
   document.getElementById('gc').style.boxShadow=
-    `0 0 0 5px #7d4e1a,0 0 0 9px #4a2c0a,0 0 0 11px rgba(0,0,0,.6),0 18px 50px rgba(0,0,0,.8)` +
+    `0 0 0 5px #7d4e1a,0 0 0 9px #4a2c0a,0 0 0 11px rgba(0,0,0,.6),0 18px 50px rgba(0,0,0,.8)`+
     (ct&&glow[ct]?`,0 0 0 15px ${glow[ct]}`:'');
 }
 
-// ── Click Handling ─────────────────────────────────────────────────
+// ── Click Handling ────────────────────────────────────────────────
 function clickToBoard(e){
   const canvas=document.getElementById('gc');
   const rect=canvas.getBoundingClientRect();
@@ -646,24 +746,23 @@ function clickToBoard(e){
 
 function handleClick(e){
   if(!GS)return;
-  // Not your turn — clear selection and return
+  const elim=GS.eliminated||[];
+  // Eliminated players can watch but not move
+  if(elim.includes(myColor)){selSq=null;legals=[];paint();return;}
+  // Not your turn
   if(GS.currentTurn!==myColor){selSq=null;legals=[];paint();return;}
-  if((GS.eliminated||[]).includes(myColor))return;
 
   const sq=clickToBoard(e);if(!sq)return;
   const[row,col]=sq;
   const piece=gp(GS.board,row,col);
 
-  // If a piece is selected, try to execute move to clicked square
   if(selSq){
     const move=legals.find(m=>m.to[0]===row&&m.to[1]===col);
     if(move){execMove(move);return;}
   }
-
-  // Select a piece of your color
   if(piece&&piece.color===myColor){
     selSq=[row,col];
-    legals=genMoves(GS.board,row,col,myColor);
+    legals=genMoves(GS.board,row,col,myColor,deserCR(GS.castlingRights));
     paint();
   }else{
     selSq=null;legals=[];paint();
@@ -672,19 +771,20 @@ function handleClick(e){
 
 function execMove(move){
   if(move.promo){pendPromo=move;showPromoModal();}
-  else commitMove(move,'E');
+  else commitMove(move,'Q');
 }
 
 function showPromoModal(){
   const modal=document.getElementById('pm'),ch=document.getElementById('pc2');
   ch.innerHTML='';
-  ['E','H','B'].forEach(type=>{
+  // Standard chess promotion pieces
+  ['Q','R','B','N'].forEach(type=>{
     const btn=document.createElement('div');btn.className='pb';
     const cv=document.createElement('canvas');cv.width=cv.height=56;
     setTimeout(()=>drawPiece(cv.getContext('2d'),type,myColor,28,28,56),10);
     btn.appendChild(cv);
     const lbl=document.createElement('span');
-    lbl.textContent={E:'Elephant',H:'Horse',B:'Boat'}[type];
+    lbl.textContent={Q:'Queen',R:'Rook',B:'Bishop',N:'Knight'}[type];
     btn.appendChild(lbl);
     btn.addEventListener('click',()=>{modal.classList.add('hidden');commitMove(pendPromo,type);pendPromo=null;});
     ch.appendChild(btn);
@@ -698,70 +798,70 @@ async function commitMove(move,promo){
   const piece=gp(board,move.from[0],move.from[1]);
   if(!piece)return;
 
-  // Apply the move locally
-  const newBoard=applyMove(board,move,promo);
-
-  // Determine next turn (skip eliminated players)
   const elim=GS.eliminated||[];
-  let nextIdx=(GS.turnIndex+1)%4;
-  for(let i=0;i<4;i++){if(!elim.includes(COLORS[nextIdx]))break;nextIdx=(nextIdx+1)%4;}
-  const nextColor=COLORS[nextIdx];
+  _elimSet=new Set(elim); // keep in sync for isFriend calls
+  const cr=deserCR(GS.castlingRights);
+  const newBoard=applyMove(board,move,promo);
+  const newCR=updateCR(cr,move,board);
 
-  // Check if any enemy king was captured this move
+  // Next turn: alternating teams (Red→Green→Blue→Gold, skipping eliminated)
+  let nextIdx=(GS.turnIndex+1)%4;
+  for(let i=0;i<4;i++){
+    if(!elim.includes(TURN_ORDER[nextIdx]))break;
+    nextIdx=(nextIdx+1)%4;
+  }
+  const nextColor=TURN_ORDER[nextIdx];
+
+  // Detect eliminated players: if their king is captured THIS move
   const newElim=[...elim];
   COLORS.filter(col=>col!==myColor&&!newElim.includes(col)).forEach(col=>{
     if(!isKingAlive(newBoard,col)){
       newElim.push(col);
-      sysChat((GS.players?.[col]?.name||col)+"'s king was captured! \u2620");
+      sysChat((GS.players?.[col]?.name||col)+"'s king was captured — eliminated! \u2620\nTheir pieces remain on the board.");
     }
   });
 
-  // Check win condition: only one team's colors remain
+  // Win: only one team left
   const surviving=COLORS.filter(col=>!newElim.includes(col));
   const teamsLeft=[...new Set(surviving.map(col=>TEAMS[col]))];
   const winner=teamsLeft.length===1?teamsLeft[0]:null;
 
-  // Build move notation
-  const note=`${myColor[0].toUpperCase()}: ${piece.type}${move.capture?'x':''}${sqName(move.to[0],move.to[1])}${move.promo?'='+promo:''}`;
+  // Move notation
+  const note=`${myColor[0].toUpperCase()}: ${piece.type}${move.capture?'x':''}${sqName(move.to[0],move.to[1])}${move.castle?'(O-O)':''}${move.promo?'='+promo:''}`;
   const elimObj=newElim.length>0?Object.fromEntries(newElim.map((col,i)=>[i,col])):null;
 
-  // Clear selection BEFORE writing to Firebase (prevents UI flicker)
   selSq=null;legals=[];
 
-  // Write to Firebase using room-relative paths
-  const roomRef=ref(db2,`rooms/${roomId}`);
   try{
-    await update(roomRef,{
+    await update(ref(db2,`rooms/${roomId}`),{
       board:newBoard,
       currentTurn:winner?null:nextColor,
       turnIndex:nextIdx,
+      castlingRights:newCR,
       eliminated:elimObj,
       lastMove:{from:move.from,to:move.to,color:myColor},
       winner:winner||null,
     });
     await push(ref(db2,`rooms/${roomId}/moveLog`),{notation:note,color:myColor,ts:Date.now()});
-  }catch(err){
-    console.error('Move write failed:',err);
-  }
+  }catch(err){console.error('Move failed:',err);}
   if(winner)showWin(winner);
 }
 
-// ── Firebase Listeners ─────────────────────────────────────────────
+// ── Firebase ──────────────────────────────────────────────────────
 function listenGame(){
   onValue(ref(db2,`rooms/${roomId}`),snap=>{
     if(!snap.exists())return;
-    const prev=GS?.currentTurn;
+    const prevTurn=GS?.currentTurn;
     GS=snap.val();
     GS.board=deserBoard(GS.board);
     GS.eliminated=deserElim(GS.eliminated);
-
-    // Auto-rotate: when it becomes YOUR turn, snap view to your perspective
-    if(autoRotate&&GS.currentTurn===myColor&&prev!==myColor){
-      perspective=myColor;
-      selSq=null;legals=[];
+    // Keep _elimSet in sync so isFriend() knows which pieces are capturable by all
+    _elimSet=new Set(GS.eliminated);
+    // Auto-rotate to your perspective when it becomes your turn
+    if(GS.currentTurn===myColor&&prevTurn!==myColor){
+      perspective=myColor;selSq=null;legals=[];
     }
-    paint();
-    updPlayers();updTurn();updCheck();
+    paint();updPlayers();updTurn();updCheck();
   });
 }
 
@@ -800,8 +900,7 @@ function setupChat(){
   const wire=(inId,btnId,ch)=>{
     const inp=document.getElementById(inId),btn=document.getElementById(btnId);
     const send=()=>{const t=inp.value.trim();if(!t)return;sendChat(ch,t);inp.value='';};
-    btn.addEventListener('click',send);
-    inp.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+    btn.addEventListener('click',send);inp.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
   };
   wire('tci','tsb','team');wire('pci','psb','public');
 }
@@ -818,11 +917,9 @@ function sysChat(text){
       {system:true,text,ts:Date.now(),color:'system',name:'System'}));
 }
 
-// ── UI Updates ─────────────────────────────────────────────────────
 function updTurn(){
   if(!GS)return;
-  const ct=GS.currentTurn;
-  const el=document.getElementById('td');
+  const ct=GS.currentTurn;const el=document.getElementById('td');
   if(!ct){el.textContent='Game Over';return;}
   const n=GS.players?.[ct]?.name||ct;
   el.textContent=ct===myColor?'\u26a1 YOUR TURN':n+"'s turn";
@@ -832,22 +929,23 @@ function updTurn(){
 function updCheck(){
   if(!GS)return;
   const el=document.getElementById('cd');
-  isKingUnderAttack(GS.board,myColor)?el.classList.remove('hidden'):el.classList.add('hidden');
+  isInCheck(GS.board,myColor)?el.classList.remove('hidden'):el.classList.add('hidden');
 }
 
 function updPlayers(){
   if(!GS)return;
   const cont=document.getElementById('pl');cont.innerHTML='';
-  COLORS.forEach(color=>{
+  TURN_ORDER.forEach(color=>{
     const p=GS.players?.[color];
     const isElim=(GS.eliminated||[]).includes(color);
     const isActive=GS.currentTurn===color;
     const row=document.createElement('div');row.className='pr';
     row.innerHTML=
       `<div class="pd ${color}"></div>`+
-      `<span class="pnl" style="${isElim?'opacity:.35;text-decoration:line-through':''}">
+      `<span class="pnl" style="${isElim?'opacity:.4;text-decoration:line-through':''}">
         ${p?.name?esc(p.name):'(waiting\u2026)'}
         <small style="color:#506080;margin-left:3px">\u2694${TEAMS[color]}</small>
+        ${isElim?'<small style="color:#e74c3c;margin-left:3px">watching</small>':''}
       </span>`+
       `<span class="ps ${isActive&&!isElim?'on':''}">
         ${isElim?'\u2620':isActive?'\u25b6':p?.name?'\u25cf':'\u25cb'}
@@ -858,8 +956,7 @@ function updPlayers(){
 
 function showWin(team){
   const el=document.getElementById('td');
-  el.textContent='\uD83C\uDFC6 TEAM '+team+' WINS!';
-  el.style.color='#ffe680';el.style.fontSize='16px';
+  el.textContent='\uD83C\uDFC6 TEAM '+team+' WINS!';el.style.color='#ffe680';el.style.fontSize='16px';
   sysChat('\uD83C\uDFC6 TEAM '+team+' WINS!');
 }
 
