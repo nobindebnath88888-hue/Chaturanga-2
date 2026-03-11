@@ -1,4 +1,4 @@
-// renderer.js — Canvas-based wooden chess board renderer
+// renderer.js — Canvas-based wooden chess board 
 
 import { drawPiece } from './pieces.js';
 
