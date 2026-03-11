@@ -232,10 +232,10 @@ const PAWN_START={red:6,  blue:6, green:1,gold:1};
 // Per the user's request: Rook = standard rook power + castling, standard promotions
 
 const PIECE_COLORS={
-  red:  {base:'#c0392b',dark:'#6e1a12',mid:'#e74c3c',hi:'#f5b7b1',rim:'#3a0a06'},
-  blue: {base:'#1a6aad',dark:'#0c3660',mid:'#2e86c1',hi:'#a9cce3',rim:'#061830'},
-  green:{base:'#1a7a3c',dark:'#0d4022',mid:'#229954',hi:'#a9dfbf',rim:'#041808'},
-  gold: {base:'#c9960c',dark:'#7a5b08',mid:'#e6b10a',hi:'#fdebd0',rim:'#3a2a02'},
+  red:  {base:'#b52a1a',dark:'#4a0e08',mid:'#e03520',hi:'#ffa090',rim:'#2a0604'},
+  blue: {base:'#1055a8',dark:'#07254a',mid:'#1e78d4',hi:'#90c8ff',rim:'#041228'},
+  green:{base:'#186b30',dark:'#083018',mid:'#23a045',hi:'#80e8a0',rim:'#041208'},
+  gold: {base:'#b07808',dark:'#4a3004',mid:'#e8a010',hi:'#ffe880',rim:'#281802'},
 };
 
 // ── Board Setup ───────────────────────────────────────────────────
@@ -360,15 +360,6 @@ function genMoves(board,row,col,color,cr){
   else if(pc.type==='Q'){
     [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>slide(dr,dc));
   }
-  else if(pc.type==='Bo'){
-    // Boat: jumps exactly 2 squares diagonally, can leap over pieces
-    [[-2,-2],[-2,2],[2,-2],[2,2]].forEach(([dr,dc])=>{
-      const tr=row+dr,tc=col+dc;
-      if(tr<0||tr>7||tc<0||tc>7)return;
-      if(!isFriend(gp(board,tr,tc),color))
-        mv.push({from:[row,col],to:[tr,tc],capture:!!gp(board,tr,tc)});
-    });
-  }
   else if(pc.type==='K'){
     [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc])=>step(dr,dc));
     // Castling: king moves 2 squares toward the rook
@@ -480,103 +471,347 @@ function d2b(dr,dc,p){
   return [dr,dc];
 }
 
-// ── Piece Drawing ─────────────────────────────────────────────────
-function lg(ctx,c,y0,y1){const g=ctx.createLinearGradient(0,y0,0,y1);g.addColorStop(0,c.hi);g.addColorStop(.35,c.mid);g.addColorStop(.72,c.base);g.addColorStop(1,c.dark);return g;}
-function rg(ctx,c,radius){const g=ctx.createRadialGradient(-radius*.3,-radius*.3,radius*.06,0,0,radius*1.1);g.addColorStop(0,c.hi);g.addColorStop(.42,c.mid);g.addColorStop(1,c.rim);return g;}
-function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
+// ════════════════════════════════════════════════════════════════════
+// ── PIECE ART — Beautiful Staunton-style 3D chess pieces ──────────
+// Each piece uses layered fills, specular highlights, rim light,
+// engraved details and proper iconic silhouettes.
+// ════════════════════════════════════════════════════════════════════
 
-function drawBase(ctx,c,s){
-  ctx.beginPath();ctx.ellipse(0,s*.84,s*.52,s*.13,0,0,Math.PI*2);ctx.fillStyle=c.dark;ctx.fill();
-  ctx.beginPath();ctx.ellipse(0,s*.74,s*.45,s*.10,0,0,Math.PI*2);ctx.fillStyle=lg(ctx,c,s*.62,s*.84);ctx.fill();
+// ── Shared gradient helpers ───────────────────────────────────────
+function _bodyGrad(ctx,c,x1,y1,x2,y2){
+  const g=ctx.createLinearGradient(x1,y1,x2,y2);
+  g.addColorStop(0,'rgba(255,255,255,.28)');
+  g.addColorStop(.18,c.hi);
+  g.addColorStop(.55,c.mid);
+  g.addColorStop(.82,c.base);
+  g.addColorStop(1,c.dark);
+  return g;
+}
+function _sphereGrad(ctx,c,cx,cy,r){
+  const g=ctx.createRadialGradient(cx-r*.38,cy-r*.38,r*.04,cx,cy,r*1.15);
+  g.addColorStop(0,'rgba(255,255,255,.85)');
+  g.addColorStop(.22,c.hi);
+  g.addColorStop(.55,c.mid);
+  g.addColorStop(.88,c.base);
+  g.addColorStop(1,c.dark);
+  return g;
+}
+function _rimLight(ctx,c,x,y,w,h,r){
+  // soft left-rim highlight on any shape's left edge
+  const g=ctx.createLinearGradient(x,y,x+w*.4,y);
+  g.addColorStop(0,'rgba(255,255,255,.18)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  return g;
+}
+function _shadow(ctx,c){
+  return c.dark+'cc';
 }
 
+// Rounded rect helper
+function _rr(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ── Shared piece base (foot + pedestal) ───────────────────────────
+function _drawBase(ctx,c,s){
+  // Drop shadow under foot
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=s*.7;ctx.shadowOffsetY=s*.18;
+  // Outer foot
+  ctx.beginPath();ctx.ellipse(0,s*.82,s*.55,s*.14,0,0,Math.PI*2);
+  const fg=ctx.createRadialGradient(0,s*.75,0,0,s*.82,s*.55);
+  fg.addColorStop(0,c.mid);fg.addColorStop(.6,c.base);fg.addColorStop(1,c.dark);
+  ctx.fillStyle=fg;ctx.fill();
+  ctx.restore();
+  // Rim on foot
+  ctx.beginPath();ctx.ellipse(0,s*.82,s*.55,s*.14,0,0,Math.PI*2);
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Foot top highlight
+  ctx.beginPath();ctx.ellipse(-s*.1,s*.76,s*.28,s*.06,-.2,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();
+  // Pedestal stem
+  ctx.beginPath();ctx.moveTo(-s*.22,s*.72);ctx.lineTo(-s*.17,s*.5);ctx.lineTo(s*.17,s*.5);ctx.lineTo(s*.22,s*.72);ctx.closePath();
+  const pg=ctx.createLinearGradient(-s*.22,0,s*.22,0);
+  pg.addColorStop(0,c.dark);pg.addColorStop(.35,c.mid);pg.addColorStop(.65,c.base);pg.addColorStop(1,c.dark);
+  ctx.fillStyle=pg;ctx.fill();
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.025;ctx.stroke();
+  // Pedestal shelf
+  ctx.beginPath();ctx.ellipse(0,s*.5,s*.24,s*.065,0,0,Math.PI*2);
+  const sg=ctx.createRadialGradient(-s*.06,s*.46,0,0,s*.5,s*.24);
+  sg.addColorStop(0,c.hi);sg.addColorStop(.5,c.mid);sg.addColorStop(1,c.dark);
+  ctx.fillStyle=sg;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.025;ctx.stroke();
+}
+
+// ── PAWN ──────────────────────────────────────────────────────────
 function drawPawn_(ctx,c,s){
-  drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.17,s*.66);ctx.bezierCurveTo(-s*.22,s*.3,-s*.14,-s*.1,0,-s*.1);ctx.bezierCurveTo(s*.14,-s*.1,s*.22,s*.3,s*.17,s*.66);ctx.closePath();
-  ctx.fillStyle=lg(ctx,c,-s*.1,s*.66);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.arc(0,-s*.36,s*.32,0,Math.PI*2);ctx.fillStyle=rg(ctx,c,s*.32);ctx.fill();ctx.stroke();
-  ctx.beginPath();ctx.arc(-s*.1,-s*.48,s*.11,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.26)';ctx.fill();
+  _drawBase(ctx,c,s);
+  // Neck
+  ctx.beginPath();
+  ctx.moveTo(-s*.13,s*.48);ctx.bezierCurveTo(-s*.16,s*.28,-s*.15,s*.12,-s*.12,s*.0);
+  ctx.bezierCurveTo(-s*.1,-s*.1,-s*.06,-s*.16,0,-s*.17);
+  ctx.bezierCurveTo(s*.06,-s*.16,s*.1,-s*.1,s*.12,s*.0);
+  ctx.bezierCurveTo(s*.15,s*.12,s*.16,s*.28,s*.13,s*.48);
+  ctx.closePath();
+  const ng=_bodyGrad(ctx,c,-s*.16,0,s*.16,0);
+  ctx.fillStyle=ng;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.035;ctx.stroke();
+  // Head sphere
+  ctx.beginPath();ctx.arc(0,-s*.38,s*.3,0,Math.PI*2);
+  ctx.fillStyle=_sphereGrad(ctx,c,0,-s*.38,s*.3);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.035;ctx.stroke();
+  // Primary specular
+  ctx.beginPath();ctx.ellipse(-s*.09,-s*.52,s*.1,s*.07,-.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.52)';ctx.fill();
+  // Secondary soft glow
+  ctx.beginPath();ctx.ellipse(-s*.04,-s*.42,s*.15,s*.1,-.3,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.14)';ctx.fill();
+  // Neck collar line
+  ctx.beginPath();ctx.ellipse(0,s*.0,s*.12,s*.035,0,0,Math.PI*2);
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.025;ctx.stroke();
 }
 
+// ── ROOK ──────────────────────────────────────────────────────────
 function drawRook_(ctx,c,s){
-  drawBase(ctx,c,s);
-  rr(ctx,-s*.32,s*.2,s*.64,s*.52,s*.07);ctx.fillStyle=lg(ctx,c,s*.2,s*.72);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  rr(ctx,-s*.36,-s*.1,s*.72,s*.32,s*.06);ctx.fillStyle=lg(ctx,c,-s*.1,s*.22);ctx.fill();ctx.stroke();
-  [-s*.28,-s*.09,s*.10].forEach(x=>{rr(ctx,x,-s*.44,s*.15,s*.36,s*.04);ctx.fillStyle=lg(ctx,c,-s*.44,-s*.08);ctx.fill();ctx.stroke();});
-  ctx.beginPath();ctx.moveTo(-s*.28,-s*.08);ctx.bezierCurveTo(-s*.44,s*.06,-s*.44,s*.24,-s*.28,s*.26);ctx.strokeStyle=c.hi;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(s*.28,-s*.08);ctx.bezierCurveTo(s*.44,s*.06,s*.44,s*.24,s*.28,s*.26);ctx.stroke();
-  ctx.beginPath();ctx.ellipse(-s*.1,s*.05,s*.05,s*.24,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.17)';ctx.fill();
+  _drawBase(ctx,c,s);
+  // Main tower body
+  ctx.beginPath();
+  ctx.moveTo(-s*.28,s*.48);ctx.lineTo(-s*.3,s*.0);ctx.lineTo(-s*.26,-s*.06);
+  ctx.lineTo(-s*.26,-s*.18);ctx.lineTo(s*.26,-s*.18);ctx.lineTo(s*.26,-s*.06);
+  ctx.lineTo(s*.3,s*.0);ctx.lineTo(s*.28,s*.48);ctx.closePath();
+  const bg=_bodyGrad(ctx,c,-s*.3,0,s*.3,0);
+  ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Tower platform / battlement base
+  _rr(ctx,-s*.32,-s*.26,s*.64,s*.1,s*.04);
+  ctx.fillStyle=_bodyGrad(ctx,c,-s*.32,-s*.26,s*.32,-s*.16);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Three merlons (battlements)
+  [[-s*.22,-s*.26],[0,-s*.26],[s*.22,-s*.26]].forEach(([bx,by])=>{
+    _rr(ctx,bx-s*.1,by-s*.24,s*.2,s*.26,s*.04);
+    ctx.fillStyle=_bodyGrad(ctx,c,bx-s*.1,by-s*.24,bx+s*.1,by);
+    ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.035;ctx.stroke();
+    // Top of merlon specular
+    ctx.beginPath();ctx.ellipse(bx,by-s*.3,s*.06,s*.025,0,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.fill();
+  });
+  // Tall specular streak on left face
+  ctx.beginPath();ctx.ellipse(-s*.17,s*.1,s*.04,s*.28,-.15,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.24)';ctx.fill();
+  // Arrow slits (2 small windows)
+  [-s*.1,s*.1].forEach(x=>{
+    ctx.beginPath();ctx.ellipse(x,s*.18,s*.025,s*.07,0,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,.35)';ctx.fill();
+  });
 }
 
+// ── KNIGHT ────────────────────────────────────────────────────────
 function drawKnight_(ctx,c,s){
-  drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.22,s*.63);ctx.lineTo(-s*.22,-s*.04);ctx.bezierCurveTo(-s*.28,-s*.24,-s*.1,-s*.56,s*.12,-s*.68);ctx.bezierCurveTo(s*.34,-s*.68,s*.42,-s*.5,s*.38,-s*.26);ctx.bezierCurveTo(s*.36,-s*.08,s*.24,s*.06,s*.22,s*.63);ctx.closePath();
-  ctx.fillStyle=lg(ctx,c,-s*.68,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(-s*.18,-s*.08);ctx.bezierCurveTo(-s*.38,-s*.16,-s*.42,-s*.58,-s*.2,-s*.74);ctx.bezierCurveTo(0,-s*.9,s*.32,-s*.8,s*.32,-s*.54);ctx.bezierCurveTo(s*.32,-s*.32,s*.18,-s*.14,s*.08,-s*.08);ctx.closePath();
-  ctx.fillStyle=rg(ctx,c,s*.5);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.arc(-s*.04,-s*.54,s*.055,0,Math.PI*2);ctx.fillStyle=c.rim;ctx.fill();
-  ctx.beginPath();ctx.arc(-s*.02,-s*.54,s*.028,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
-  ctx.beginPath();ctx.arc(s*.18,-s*.34,s*.032,0,Math.PI*2);ctx.fillStyle=c.dark;ctx.fill();
-  ctx.beginPath();ctx.ellipse(-s*.09,-s*.42,s*.055,s*.13,-.5,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();
+  _drawBase(ctx,c,s);
+  // Body/neck mass
+  ctx.beginPath();
+  ctx.moveTo(-s*.2,s*.48);
+  ctx.bezierCurveTo(-s*.24,s*.3,-s*.22,s*.1,-s*.18,-s*.06);
+  ctx.bezierCurveTo(-s*.15,-s*.18,-s*.08,-s*.28,s*.02,-s*.35);
+  ctx.bezierCurveTo(s*.12,-s*.42,s*.24,-s*.42,s*.28,-s*.32);
+  ctx.bezierCurveTo(s*.3,-s*.2,s*.2,-s*.04,s*.2,s*.48);
+  ctx.closePath();
+  ctx.fillStyle=_bodyGrad(ctx,c,-s*.28,s*.48,s*.28,s*.48);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Horse head
+  ctx.beginPath();
+  ctx.moveTo(-s*.02,-s*.3);
+  ctx.bezierCurveTo(-s*.22,-s*.34,-s*.36,-s*.52,-s*.28,-s*.72);
+  ctx.bezierCurveTo(-s*.18,-s*.9,-s*.0,-s*.95,s*.14,-s*.88);
+  ctx.bezierCurveTo(s*.3,-s*.8,s*.36,-s*.62,s*.32,-s*.48);
+  ctx.bezierCurveTo(s*.28,-s*.36,s*.18,-s*.28,s*.06,-s*.24);
+  ctx.bezierCurveTo(s*.02,-s*.22,-s*.0,-s*.28,-s*.02,-s*.3);
+  ctx.closePath();
+  const hg=_bodyGrad(ctx,c,-s*.36,-s*.95,s*.36,-s*.24);
+  ctx.fillStyle=hg;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Snout/muzzle bump
+  ctx.beginPath();
+  ctx.moveTo(s*.3,-s*.48);ctx.bezierCurveTo(s*.42,-s*.52,s*.44,-s*.62,s*.36,-s*.7);
+  ctx.bezierCurveTo(s*.28,-s*.78,s*.14,-s*.78,s*.14,-s*.7);
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.035;ctx.stroke();
+  // Ear
+  ctx.beginPath();ctx.moveTo(-s*.12,-s*.9);ctx.bezierCurveTo(-s*.14,-s*.98,-s*.06,-s*1.04,0,-s*.98);
+  ctx.bezierCurveTo(s*.04,-s*.94,s*.04,-s*.9,s*.0,-s*.86);ctx.closePath();
+  ctx.fillStyle=c.mid;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Eye — bright with pupil
+  ctx.beginPath();ctx.arc(-s*.08,-s*.66,s*.065,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.9)';ctx.fill();
+  ctx.beginPath();ctx.arc(-s*.06,-s*.66,s*.038,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,.75)';ctx.fill();
+  ctx.beginPath();ctx.arc(-s*.04,-s*.68,s*.014,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.9)';ctx.fill();
+  // Nostril
+  ctx.beginPath();ctx.ellipse(s*.26,-s*.58,s*.025,s*.018,-.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fill();
+  // Mane engraving lines
+  ctx.save();ctx.globalAlpha=.22;ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;
+  [[s*.04,-s*.84,s*.08,-s*.62],[s*.1,-s*.86,s*.16,-s*.64],[s*.18,-s*.86,s*.22,-s*.66]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.bezierCurveTo(x1-s*.04,y1+s*.1,x2-s*.04,y2-s*.08,x2,y2);ctx.stroke();
+  });
+  ctx.restore();
+  // Specular on head
+  ctx.beginPath();ctx.ellipse(-s*.18,-s*.7,s*.06,s*.14,-.6,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.32)';ctx.fill();
 }
 
+// ── BISHOP ────────────────────────────────────────────────────────
 function drawBishop_(ctx,c,s){
-  drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.3,s*.62);ctx.bezierCurveTo(-s*.38,s*.3,-s*.28,-s*.1,-s*.1,-s*.38);ctx.bezierCurveTo(-s*.05,-s*.44,s*.05,-s*.44,s*.1,-s*.38);ctx.bezierCurveTo(s*.28,-s*.1,s*.38,s*.3,s*.3,s*.62);ctx.closePath();
-  ctx.fillStyle=lg(ctx,c,-s*.44,s*.62);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.arc(0,-s*.52,s*.2,0,Math.PI*2);ctx.fillStyle=rg(ctx,c,s*.2);ctx.fill();ctx.stroke();
-  ctx.beginPath();ctx.moveTo(-s*.07,-s*.68);ctx.lineTo(0,-s*.96);ctx.lineTo(s*.07,-s*.68);ctx.fillStyle=c.mid;ctx.fill();
-  ctx.beginPath();ctx.ellipse(-s*.08,-s*.1,s*.05,s*.22,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.2)';ctx.fill();
+  _drawBase(ctx,c,s);
+  // Body — tall elegant teardrop
+  ctx.beginPath();
+  ctx.moveTo(-s*.2,s*.48);
+  ctx.bezierCurveTo(-s*.26,s*.28,-s*.22,s*.08,-s*.16,-s*.04);
+  ctx.bezierCurveTo(-s*.12,-s*.14,-s*.1,-s*.26,-s*.08,-s*.38);
+  ctx.bezierCurveTo(-s*.04,-s*.52,s*.04,-s*.52,s*.08,-s*.38);
+  ctx.bezierCurveTo(s*.1,-s*.26,s*.12,-s*.14,s*.16,-s*.04);
+  ctx.bezierCurveTo(s*.22,s*.08,s*.26,s*.28,s*.2,s*.48);
+  ctx.closePath();
+  ctx.fillStyle=_bodyGrad(ctx,c,-s*.26,s*.48,s*.26,s*.48);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Ball at top of body
+  ctx.beginPath();ctx.arc(0,-s*.46,s*.18,0,Math.PI*2);
+  ctx.fillStyle=_sphereGrad(ctx,c,0,-s*.46,s*.18);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Collar ring
+  ctx.beginPath();ctx.ellipse(0,-s*.3,s*.16,s*.045,0,0,Math.PI*2);
+  const cg=ctx.createLinearGradient(0,-s*.35,0,-s*.26);
+  cg.addColorStop(0,c.hi);cg.addColorStop(1,c.dark);
+  ctx.fillStyle=cg;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Mitre spike
+  ctx.beginPath();ctx.moveTo(-s*.045,-s*.6);ctx.lineTo(0,-s*.98);ctx.lineTo(s*.045,-s*.6);ctx.closePath();
+  const mg=ctx.createLinearGradient(-s*.045,-s*.98,s*.045,-s*.6);
+  mg.addColorStop(0,'rgba(255,255,255,.6)');mg.addColorStop(.4,c.hi);mg.addColorStop(1,c.base);
+  ctx.fillStyle=mg;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Ball cap at spike base
+  ctx.beginPath();ctx.arc(0,-s*.64,s*.055,0,Math.PI*2);
+  ctx.fillStyle=_sphereGrad(ctx,c,0,-s*.64,s*.055);ctx.fill();
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Body engraving — horizontal groove
+  ctx.beginPath();ctx.ellipse(0,s*.1,s*.17,s*.04,0,0,Math.PI*2);
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.025;ctx.stroke();
+  // Specular streak
+  ctx.beginPath();ctx.ellipse(-s*.1,s*.05,s*.04,s*.26,-.2,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.24)';ctx.fill();
+  // Ball specular
+  ctx.beginPath();ctx.ellipse(-s*.06,-s*.52,s*.06,s*.04,-.4,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.55)';ctx.fill();
 }
 
-function drawBoat_(ctx,c,s){
-  drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.5,s*.3);ctx.bezierCurveTo(-s*.55,s*.08,-s*.4,-s*.16,0,-s*.2);ctx.bezierCurveTo(s*.4,-s*.16,s*.55,s*.08,s*.5,s*.3);ctx.bezierCurveTo(s*.45,s*.56,-s*.45,s*.56,-s*.5,s*.3);ctx.closePath();
-  ctx.fillStyle=lg(ctx,c,-s*.2,s*.56);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(-s*.44,s*.18);ctx.lineTo(s*.44,s*.18);ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=s*.04;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,s*.14);ctx.lineTo(0,-s*.72);ctx.strokeStyle=c.mid;ctx.lineWidth=s*.06;ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-s*.66);ctx.bezierCurveTo(s*.5,-s*.54,s*.48,-s*.18,0,-s*.04);ctx.closePath();
-  ctx.fillStyle=c.hi;ctx.globalAlpha=.72;ctx.fill();ctx.globalAlpha=1;ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
-  ctx.beginPath();ctx.ellipse(-s*.18,s*.05,s*.06,s*.2,-.35,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill();
-}
-
+// ── QUEEN ────────────────────────────────────────────────────────
 function drawQueen_(ctx,c,s){
-  drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.44,s*.63);ctx.bezierCurveTo(-s*.52,s*.3,-s*.38,-s*.05,-s*.18,-s*.28);ctx.bezierCurveTo(-s*.1,-s*.34,s*.1,-s*.34,s*.18,-s*.28);ctx.bezierCurveTo(s*.38,-s*.05,s*.52,s*.3,s*.44,s*.63);ctx.closePath();
-  ctx.fillStyle=lg(ctx,c,-s*.28,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  ctx.beginPath();ctx.ellipse(0,-s*.32,s*.28,s*.08,0,0,Math.PI*2);ctx.fillStyle=lg(ctx,c,-s*.4,-s*.24);ctx.fill();ctx.stroke();
-  [-s*.26,-s*.13,0,s*.13,s*.26].forEach((x,i)=>{
-    const h=[s*.82,s*.7,s*.78,s*.7,s*.82][i];
-    ctx.beginPath();ctx.arc(x,-s*.32-h*.36,s*.1,0,Math.PI*2);
-    ctx.fillStyle=rg(ctx,c,s*.1);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  _drawBase(ctx,c,s);
+  // Body — wider, regal silhouette
+  ctx.beginPath();
+  ctx.moveTo(-s*.3,s*.48);
+  ctx.bezierCurveTo(-s*.36,s*.28,-s*.3,s*.06,-s*.22,-s*.06);
+  ctx.bezierCurveTo(-s*.16,-s*.16,-s*.16,-s*.28,-s*.14,-s*.38);
+  ctx.bezierCurveTo(-s*.1,-s*.5,s*.1,-s*.5,s*.14,-s*.38);
+  ctx.bezierCurveTo(s*.16,-s*.28,s*.16,-s*.16,s*.22,-s*.06);
+  ctx.bezierCurveTo(s*.3,s*.06,s*.36,s*.28,s*.3,s*.48);
+  ctx.closePath();
+  ctx.fillStyle=_bodyGrad(ctx,c,-s*.36,s*.48,s*.36,s*.48);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  // Crown band
+  ctx.beginPath();ctx.ellipse(0,-s*.4,s*.22,s*.065,0,0,Math.PI*2);
+  const cbg=ctx.createLinearGradient(0,-s*.47,0,-s*.34);
+  cbg.addColorStop(0,c.hi);cbg.addColorStop(.5,c.mid);cbg.addColorStop(1,c.dark);
+  ctx.fillStyle=cbg;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // 5 crown points (orbs on spikes)
+  const pts=[[-s*.22,-s*.42],[-s*.11,-s*.44],[0,-s*.46],[s*.11,-s*.44],[s*.22,-s*.42]];
+  const spikeH=[s*.28,s*.34,s*.38,s*.34,s*.28];
+  pts.forEach(([px,py],i)=>{
+    // Spike
+    ctx.beginPath();ctx.moveTo(px-s*.025,py);ctx.lineTo(px,py-spikeH[i]);ctx.lineTo(px+s*.025,py);ctx.closePath();
+    ctx.fillStyle=c.mid;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.025;ctx.stroke();
+    // Orb on top
+    ctx.beginPath();ctx.arc(px,py-spikeH[i],s*.06,0,Math.PI*2);
+    ctx.fillStyle=_sphereGrad(ctx,c,px,py-spikeH[i],s*.06);ctx.fill();
+    ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+    // Orb glint
+    ctx.beginPath();ctx.ellipse(px-s*.02,py-spikeH[i]-s*.03,s*.025,s*.018,-.4,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.65)';ctx.fill();
   });
-  ctx.beginPath();ctx.arc(0,-s*.32-s*.78*.36,s*.06,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
-  ctx.beginPath();ctx.ellipse(-s*.14,s*.1,s*.06,s*.22,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill();
+  // Body waist groove
+  ctx.beginPath();ctx.ellipse(0,-s*.04,s*.24,s*.05,0,0,Math.PI*2);
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Body specular
+  ctx.beginPath();ctx.ellipse(-s*.14,s*.12,s*.05,s*.28,-.18,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();
+  // Crown specular
+  ctx.beginPath();ctx.ellipse(-s*.08,-s*.41,s*.08,s*.03,-.2,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.38)';ctx.fill();
 }
 
+// ── KING ─────────────────────────────────────────────────────────
 function drawKing_(ctx,c,s){
-  drawBase(ctx,c,s);
-  ctx.beginPath();ctx.moveTo(-s*.42,s*.63);ctx.bezierCurveTo(-s*.5,s*.26,-s*.36,-s*.08,-s*.18,-s*.28);ctx.bezierCurveTo(-s*.1,-s*.34,s*.1,-s*.34,s*.18,-s*.28);ctx.bezierCurveTo(s*.36,-s*.08,s*.5,s*.26,s*.42,s*.63);ctx.closePath();
-  ctx.fillStyle=lg(ctx,c,-s*.28,s*.63);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.05;ctx.stroke();
-  rr(ctx,-s*.32,-s*.5,s*.64,s*.22,s*.05);ctx.fillStyle=lg(ctx,c,-s*.5,-s*.28);ctx.fill();ctx.stroke();
-  [-s*.22,0,s*.22].forEach((x,i)=>{
-    const h=i===1?s*.56:s*.36;
-    rr(ctx,x-s*.09,-s*.5-h,s*.18,h+s*.05,s*.04);
-    ctx.fillStyle=lg(ctx,c,-s*.5-h,-s*.28);ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.04;ctx.stroke();
+  _drawBase(ctx,c,s);
+  // Body — broadest, most imposing
+  ctx.beginPath();
+  ctx.moveTo(-s*.32,s*.48);
+  ctx.bezierCurveTo(-s*.38,s*.26,-s*.34,s*.04,-s*.26,-s*.08);
+  ctx.bezierCurveTo(-s*.2,-s*.18,-s*.2,-s*.32,-s*.18,-s*.44);
+  ctx.bezierCurveTo(-s*.12,-s*.56,s*.12,-s*.56,s*.18,-s*.44);
+  ctx.bezierCurveTo(s*.2,-s*.32,s*.2,-s*.18,s*.26,-s*.08);
+  ctx.bezierCurveTo(s*.34,s*.04,s*.38,s*.26,s*.32,s*.48);
+  ctx.closePath();
+  ctx.fillStyle=_bodyGrad(ctx,c,-s*.38,s*.48,s*.38,s*.48);
+  ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.045;ctx.stroke();
+  // Crown band — wider
+  ctx.beginPath();ctx.ellipse(0,-s*.46,s*.24,s*.072,0,0,Math.PI*2);
+  const kb=ctx.createLinearGradient(0,-s*.53,0,-s*.39);
+  kb.addColorStop(0,c.hi);kb.addColorStop(.5,c.mid);kb.addColorStop(1,c.dark);
+  ctx.fillStyle=kb;ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.035;ctx.stroke();
+  // Three arches (crown points) — wider and more solid than queen's
+  [[-s*.2,-s*.48],[0,-s*.48],[s*.2,-s*.48]].forEach(([px,py],i)=>{
+    const h=i===1?s*.46:s*.32;
+    // Arch shaft
+    _rr(ctx,px-s*.07,py-h,s*.14,h,s*.04);
+    ctx.fillStyle=_bodyGrad(ctx,c,px-s*.07,py-h,px+s*.07,py);
+    ctx.fill();ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+    // Arch tip sphere
+    ctx.beginPath();ctx.arc(px,py-h,s*.08,0,Math.PI*2);
+    ctx.fillStyle=_sphereGrad(ctx,c,px,py-h,s*.08);ctx.fill();
+    ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+    ctx.beginPath();ctx.ellipse(px-s*.03,py-h-s*.04,s*.035,s*.025,-.4,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.fill();
   });
-  ctx.fillStyle=c.hi;ctx.fillRect(-s*.04,-s*.5-s*.56-s*.05,s*.08,s*.3);ctx.fillRect(-s*.14,-s*.5-s*.56+s*.06,s*.28,s*.08);
-  [-s*.2,0,s*.2].forEach(x=>{
-    ctx.beginPath();ctx.arc(x,-s*.39,s*.065,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();
-    ctx.beginPath();ctx.arc(x,-s*.39,s*.038,0,Math.PI*2);ctx.fillStyle=c.hi;ctx.fill();
+  // Cross on centre arch — the iconic king cross
+  const cx2=0,cy2=-(s*.48+s*.46+s*.08);
+  ctx.beginPath();ctx.moveTo(cx2,cy2+s*.05);ctx.lineTo(cx2,cy2-s*.22);
+  ctx.strokeStyle=c.hi;ctx.lineWidth=s*.07;ctx.lineCap='round';ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx2-s*.13,cy2-s*.08);ctx.lineTo(cx2+s*.13,cy2-s*.08);
+  ctx.stroke();ctx.lineCap='butt';
+  // Jewels on crown band — 3 dots
+  [-s*.16,0,s*.16].forEach(jx=>{
+    ctx.beginPath();ctx.arc(jx,-s*.46,s*.04,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.fill();
+    ctx.beginPath();ctx.arc(jx,-s*.46,s*.025,0,Math.PI*2);
+    ctx.fillStyle=c.hi;ctx.fill();
   });
-  ctx.beginPath();ctx.ellipse(-s*.14,s*.1,s*.06,s*.21,-.3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill();
+  // Waist groove
+  ctx.beginPath();ctx.ellipse(0,-s*.1,s*.28,s*.056,0,0,Math.PI*2);
+  ctx.strokeStyle=c.dark;ctx.lineWidth=s*.03;ctx.stroke();
+  // Body specular
+  ctx.beginPath();ctx.ellipse(-s*.18,s*.14,s*.055,s*.28,-.18,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,.22)';ctx.fill();
 }
 
 function drawPiece(ctx,type,ck,cx,cy,sz){
   const c=PIECE_COLORS[ck];
-  ctx.save();ctx.translate(cx,cy);
-  ctx.shadowColor='rgba(0,0,0,.58)';ctx.shadowBlur=sz*.1;ctx.shadowOffsetY=sz*.04;
-  const s=sz*.42;
+  ctx.save();
+  ctx.translate(cx,cy);
+  // Ambient drop shadow
+  ctx.shadowColor='rgba(0,0,0,.7)';
+  ctx.shadowBlur=sz*.22;
+  ctx.shadowOffsetY=sz*.12;
+  const s=sz*.44;
   const D={P:drawPawn_,R:drawRook_,N:drawKnight_,B:drawBishop_,Q:drawQueen_,K:drawKing_};
   if(D[type])D[type](ctx,c,s);
   ctx.restore();
