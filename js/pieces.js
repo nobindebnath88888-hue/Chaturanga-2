@@ -1,5 +1,5 @@
 // pieces.js — SVG-style Chess Piece Renderer (Chess.com inspired)
-// Each piece is drawn via Canvas 2D path commands
+// Each piece is drawn via Canvas 2D pathcommands
 
 export const PIECE_COLORS = {
   red:   { fill: '#c0392b', stroke: '#7b241c', light: '#e74c3c', shine: '#f1948a' },
