@@ -1,4 +1,4 @@
-// gamelogic.js — Four-Player Chaturanga Game Rules
+// gamelogic.js — Four-Plyer Chaturanga Game Rules
 
 // Turn order: Red(0) → Blue(1) → Green(2) → Gold(3) → repeat
 // Teams: Red+Blue (Team A)  vs  Green+Gold (Team B)
