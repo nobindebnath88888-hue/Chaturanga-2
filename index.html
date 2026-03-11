@@ -232,10 +232,11 @@ const PAWN_START={red:6,  blue:6, green:1,gold:1};
 // Per the user's request: Rook = standard rook power + castling, standard promotions
 
 const PIECE_COLORS={
-  red:  {fill:'#f0aaaa',stroke:'#5a0a0a',hl:'rgba(255,255,255,.60)',sh:'rgba(80,0,0,.30)',   detail:'#8a1818'},
-  blue: {fill:'#a0c8f8',stroke:'#08205e',hl:'rgba(255,255,255,.60)',sh:'rgba(0,8,60,.30)',   detail:'#0a3080'},
-  green:{fill:'#98e0aa',stroke:'#083a18',hl:'rgba(255,255,255,.60)',sh:'rgba(0,40,10,.30)',  detail:'#0c4820'},
-  gold: {fill:'#f8e090',stroke:'#583600',hl:'rgba(255,255,255,.60)',sh:'rgba(70,30,0,.30)',  detail:'#704800'},
+  // fill=piece colour, stroke=dark outline, hl=inner highlight colour
+  red:  {fill:'#e8a0a0', stroke:'#1a0000', hl:'rgba(255,255,255,0.75)'},
+  blue: {fill:'#9ec4f0', stroke:'#000820', hl:'rgba(255,255,255,0.75)'},
+  green:{fill:'#88d4a0', stroke:'#001408', hl:'rgba(255,255,255,0.75)'},
+  gold: {fill:'#f0d870', stroke:'#200800', hl:'rgba(255,255,255,0.75)'},
 };
 
 // ── Board Setup ───────────────────────────────────────────────────
@@ -472,323 +473,191 @@ function d2b(dr,dc,p){
 }
 
 // ══════════════════════════════════════════════════════════════════
-// PIECE ART — Lichess-style flat vector pieces (matching screenshot)
-// Clean silhouettes · flat fills · bold outline · subtle inner shade
+// PIECE ART — cburnett style (Lichess) via Path2D
+// Original SVG paths by Colin M.L. Burnett (CC BY-SA 3.0)
+// Each piece: thick dark outline fill, then light fill, then white
+// inner-highlight stroke for the classic Lichess two-tone look.
+// Original viewBox: 0 0 45 45  →  we scale to fit the tile.
 // ══════════════════════════════════════════════════════════════════
 
-function _fs(ctx,fill,stroke,lw){
-  ctx.fillStyle=fill; ctx.fill();
-  ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke();
-}
-function _shade(ctx,c,x1,y1,x2,y2){
-  const g=ctx.createLinearGradient(x1,y1,x2,y2);
-  g.addColorStop(0,c.hl);
-  g.addColorStop(0.5,'rgba(255,255,255,0)');
-  g.addColorStop(1,c.sh);
-  ctx.fillStyle=g; ctx.fill();
+// ── cburnett SVG path data (45×45 viewBox) ────────────────────────
+const _SVG = {
+  P: {
+    outline: 'M 22,9 C 19.79,9 18,10.79 18,13 C 18,13.89 18.29,14.71 18.78,15.38 C 16.83,16.5 15.5,18.59 15.5,21 C 15.5,23.03 16.44,24.84 17.91,26.03 C 14.91,27.09 10.5,31.58 10.5,39.5 L 33.5,39.5 C 33.5,31.58 29.09,27.09 26.09,26.03 C 27.56,24.84 28.5,23.03 28.5,21 C 28.5,18.59 27.17,16.5 25.22,15.38 C 25.71,14.71 26,13.89 26,13 C 26,10.79 24.21,9 22,9 z',
+    highlight: 'M 22,9 C 19.79,9 18,10.79 18,13 C 18,13.89 18.29,14.71 18.78,15.38 C 16.83,16.5 15.5,18.59 15.5,21 C 15.5,23.03 16.44,24.84 17.91,26.03 C 14.91,27.09 10.5,31.58 10.5,39.5 L 33.5,39.5 C 33.5,31.58 29.09,27.09 26.09,26.03 C 27.56,24.84 28.5,23.03 28.5,21 C 28.5,18.59 27.17,16.5 25.22,15.38 C 25.71,14.71 26,13.89 26,13 C 26,10.79 24.21,9 22,9 z',
+    hlStroke: 'M 22,15.5 C 20.05,15.5 18.43,16.86 18.08,18.71 C 17.03,18.95 16.25,19.84 16.25,20.96 C 16.25,21.86 16.77,22.63 17.53,23.04 C 15.04,24.1 13.25,27.09 13.25,30.47 L 30.75,30.47 C 30.75,27.09 28.96,24.1 26.47,23.04 C 27.23,22.63 27.75,21.86 27.75,20.96 C 27.75,19.84 26.97,18.95 25.92,18.71 C 25.57,16.86 23.95,15.5 22,15.5 z'
+  },
+  R: {
+    outline: 'M 9,39 L 36,39 L 36,36 L 9,36 L 9,39 z M 12,36 L 12,32 L 33,32 L 33,36 L 12,36 z M 11,14 L 11,9 L 15,9 L 15,11 L 20,11 L 20,9 L 25,9 L 25,11 L 30,11 L 30,9 L 34,9 L 34,14 z M 34,14 L 31,17 L 14,17 L 11,14 z M 31,17 L 31,29.5 L 14,29.5 L 14,17 z M 31,29.5 L 33,32 L 12,32 L 14,29.5 z',
+    highlight: 'M 12,35.5 L 33,35.5 L 33,32.5 L 12,32.5 L 12,35.5 z M 14.5,29 L 30.5,29 L 30.5,17.5 L 14.5,17.5 L 14.5,29 z M 13,13.5 L 13,9.5 L 15.5,9.5 L 15.5,11.5 L 20.5,11.5 L 20.5,9.5 L 24.5,9.5 L 24.5,11.5 L 29.5,11.5 L 29.5,9.5 L 32,9.5 L 32,13.5 z'
+  },
+  N: {
+    outline: 'M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18 z M 8,39 C 8,39 7,37.5 8.5,35.5 C 9,34 12,32 12,32 C 12,32 10,31 10.5,29 C 11,27 11.5,26 13,25 C 14.5,24 13.5,22 14,22 C 14.5,22 15.5,22.5 15.5,22.5 C 15.5,22.5 16,22 16,22 C 16,22 12.5,16 14,13 C 16,9 19.5,9 22,10 C 22,10 22.5,11.5 22,12 L 24.5,14 C 25,14.5 25.5,15 24,17 C 22.5,19 24.5,20 26,21 C 27,22 27.5,22 27.5,23.5 C 28,24.5 28.5,25 27,26 C 25.5,27 23,27.5 22,29 C 21,30.5 18,35.5 16,38 C 14,40.5 13,39 13,39 C 13,39 13,39.5 13,40.5 C 13,41 11,41 11,41 C 11,41 7.5,41 7.5,39 z',
+    highlight: 'M 24.55,10.4 L 24.1,11.85 L 24.6,12 C 25.75,13.3 27.25,14.95 27.1,17.25 C 26.9,20.25 25.2,21 23.75,22.5 C 23.25,23.05 22.8,23.6 22.4,24.2 L 22.85,24.35 C 21.1,26.55 20.05,28.25 20.05,32.5 L 22.4,32.5 C 22.4,32.5 22.85,31.15 25.45,30.15 C 27.9,29.2 31.4,28.35 31.75,24.1 C 32.35,22.25 30.75,21.35 30.85,20.5 C 31.1,18.6 30.05,17.15 29.3,16.05 L 29.05,15.55 C 29.05,15.55 29.4,16.05 28.6,15.25 C 27.8,14.45 27.3,14.05 26.75,13.75 L 27.1,12.65 z'
+  },
+  B: {
+    outline: 'M 9,36 C 12.39,35.03 19.11,36.43 22.5,34 C 25.89,36.43 32.61,35.03 36,36 C 36,36 37.65,36.54 39,38 C 38.32,38.97 37.35,38.99 36,38.5 C 32.61,37.53 25.89,38.96 22.5,37.5 C 19.11,38.96 12.39,37.53 9,38.5 C 7.65,38.99 6.68,38.97 6,38 C 7.35,36.54 9,36 9,36 z M 15,32 C 17.5,34.5 27.5,34.5 30,32 C 30.5,30.5 30,30 30,30 C 30,27.5 27.5,26 27.5,26 C 33,24.5 33.5,14.5 22.5,10.5 C 11.5,14.5 12,24.5 17.5,26 C 17.5,26 15,27.5 15,30 C 15,30 14.5,30.5 15,32 z M 25,8 A 2.5,2.5 0 1 1 20,8 A 2.5,2.5 0 1 1 25,8 z',
+    highlight: 'M 17.5,26 C 17.5,26 15.01,27.51 15,30 C 15,32.5 16.5,34.07 18.07,34.36 C 20.02,34.72 21.49,35.17 22.5,36 C 23.51,35.17 24.98,34.72 26.93,34.36 C 28.5,34.07 30,32.5 30,30 C 30,27.5 27.5,26 27.5,26 C 33,24.5 33.5,14.5 22.5,10.5 C 11.5,14.5 12,24.5 17.5,26 z M 22.5,15.5 C 22.5,15.5 27,17 27.5,20 C 27.5,23 25,25.5 22.5,25.5 C 20,25.5 17.5,23 17.5,20 C 18,17 22.5,15.5 22.5,15.5 z',
+    tipBall: 'M 25,8 A 2.5,2.5 0 1 1 20,8 A 2.5,2.5 0 1 1 25,8 z'
+  },
+  Q: {
+    outline: 'M 9,26 C 17.5,24.5 30,24.5 36,26 L 38.5,13.5 L 31,25 L 30.7,10.9 L 25.5,24.5 L 22.5,10 L 19.5,24.5 L 14.3,10.9 L 14,25 L 6.5,13.5 L 9,26 z M 9,26 C 9,28 10.5,28 11.5,30 C 12.5,31.5 12.5,31 12,33.5 C 10.5,34.5 10.5,36 10.5,36 C 9,37.5 11,38.5 11,38.5 C 17.5,39.5 27.5,39.5 34,38.5 C 34,38.5 36,37.5 34.5,36 C 34.5,36 34.5,34.5 33,33.5 C 32.5,31 32.5,31.5 33.5,30 C 34.5,28 36,28 36,26 C 27.5,24.5 17.5,24.5 9,26 z M 11.5,30 C 15,29 30,29 33.5,30',
+    highlight: 'M 9,26 C 17.5,24.5 30,24.5 36,26 C 36,26 38.5,13.5 38.5,13.5 L 31,25 C 31,25 30.7,10.9 30.7,10.9 L 25.5,24.5 L 22.5,10 L 19.5,24.5 L 14.3,10.9 C 14.3,10.9 14,25 14,25 L 6.5,13.5 C 6.5,13.5 9,26 9,26 z',
+    orbs: [
+      'M 6,12 A 2,2 0 1 1 2,12 A 2,2 0 1 1 6,12 z',
+      'M 14,9 A 2,2 0 1 1 10,9 A 2,2 0 1 1 14,9 z',
+      'M 24.5,8 A 2,2 0 1 1 20.5,8 A 2,2 0 1 1 24.5,8 z',
+      'M 35,9 A 2,2 0 1 1 31,9 A 2,2 0 1 1 35,9 z',
+      'M 43,12 A 2,2 0 1 1 39,12 A 2,2 0 1 1 43,12 z'
+    ]
+  },
+  K: {
+    outline: 'M 22.5,11.63 L 22.5,6 M 20,8 L 25,8 M 22.5,25 C 22.5,25 27,17.5 25.5,14.5 C 25.5,14.5 24.5,12 22.5,12 C 20.5,12 19.5,14.5 19.5,14.5 C 18,17.5 22.5,25 22.5,25 z M 11.5,37 C 17,40.5 27,40.5 32.5,37 L 32.5,30 C 32.5,30 41.5,25.5 38.5,19.5 C 34.5,13 25,16 22.5,23.5 L 22.5,27 L 22.5,23.5 C 19,16 9.5,13 6.5,19.5 C 3.5,25.5 11.5,30 11.5,30 z',
+    crown: 'M 11.5,30 C 11.5,30 17,27 22.5,27 C 28,27 32.5,30 32.5,30',
+    highlight: 'M 11.5,30 C 17,40.5 27,40.5 32.5,30 C 32.5,30 41.5,25.5 38.5,19.5 C 34.5,13 25,16 22.5,23.5 C 19,16 9.5,13 6.5,19.5 C 3.5,25.5 11.5,30 z'
+  }
+};
+
+// Pre-compile Path2D objects (done once)
+const _P2D = {};
+function _getPath(type, key){
+  const k = type+'_'+key;
+  if(!_P2D[k]){
+    const src = _SVG[type][key];
+    if(Array.isArray(src)) return src.map(s=>new Path2D(s));
+    _P2D[k] = new Path2D(src);
+  }
+  return _P2D[k];
 }
 
-// Shared wide base — the flat pedestal all pieces sit on
-function _base(ctx,c,S,hw){
-  hw = hw||0.40;
-  ctx.beginPath();
-  ctx.moveTo(-S*hw, S*0.82);
-  ctx.quadraticCurveTo(-S*(hw+0.06), S*0.82, -S*(hw+0.04), S*0.70);
-  ctx.lineTo(-S*0.16, S*0.50);
-  ctx.lineTo( S*0.16, S*0.50);
-  ctx.quadraticCurveTo(S*(hw+0.04), S*0.70, S*(hw+0.06), S*0.82);
-  ctx.lineTo(-S*hw, S*0.82);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, S*0.055);
-  // top-of-base inner highlight strip
-  ctx.beginPath();
-  ctx.ellipse(0, S*0.58, S*(hw*0.52), S*0.048, 0, 0, Math.PI*2);
-  ctx.fillStyle = c.hl; ctx.fill();
-}
+// ── Render one piece onto canvas ──────────────────────────────────
+// cx,cy = centre of cell in canvas pixels, sz = cell size (80px)
+function drawPiece(ctx, type, colorKey, cx, cy, sz){
+  const c = PIECE_COLORS[colorKey];
+  // scale from 45×45 SVG viewBox to sz pixels, centred
+  const scale = sz / 45;
 
-// Rounded-top post  (used by rook battlements & king arches)
-function _post(ctx,cx,cy,pw,ph){
-  const r = pw/2;
-  ctx.beginPath();
-  ctx.moveTo(cx-r, cy);
-  ctx.lineTo(cx-r, cy-ph+r);
-  ctx.arc(cx, cy-ph+r, r, Math.PI, 0);
-  ctx.lineTo(cx+r, cy);
-  ctx.closePath();
-}
-
-// ── PAWN ─────────────────────────────────────────────────────────
-function drawPawn_(ctx,c,S){
-  _base(ctx,c,S,0.34);
-  const lw = S*0.055;
-  // tapered neck
-  ctx.beginPath();
-  ctx.moveTo(-S*0.13, S*0.49);
-  ctx.bezierCurveTo(-S*0.17, S*0.28, -S*0.15, S*0.06, -S*0.10, -S*0.04);
-  ctx.bezierCurveTo(-S*0.07, -S*0.12, S*0.07, -S*0.12, S*0.10, -S*0.04);
-  ctx.bezierCurveTo(S*0.15, S*0.06, S*0.17, S*0.28, S*0.13, S*0.49);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath();
-  ctx.moveTo(-S*0.13, S*0.49);
-  ctx.bezierCurveTo(-S*0.17, S*0.28, -S*0.15, S*0.06, -S*0.10, -S*0.04);
-  ctx.bezierCurveTo(-S*0.07, -S*0.12, S*0.07, -S*0.12, S*0.10, -S*0.04);
-  ctx.bezierCurveTo(S*0.15, S*0.06, S*0.17, S*0.28, S*0.13, S*0.49);
-  ctx.closePath();
-  _shade(ctx,c,-S*0.17,0, S*0.17,0);
-  // ball head
-  ctx.beginPath(); ctx.arc(0, -S*0.30, S*0.26, 0, Math.PI*2);
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath(); ctx.arc(0, -S*0.30, S*0.26, 0, Math.PI*2);
-  _shade(ctx,c,-S*0.18,-S*0.48, S*0.14,-S*0.12);
-}
-
-// ── ROOK ─────────────────────────────────────────────────────────
-function drawRook_(ctx,c,S){
-  _base(ctx,c,S,0.38);
-  const lw = S*0.055;
-  // main shaft
-  ctx.beginPath();
-  ctx.moveTo(-S*0.23, S*0.49);
-  ctx.lineTo(-S*0.25, S*0.06);
-  ctx.lineTo( S*0.25, S*0.06);
-  ctx.lineTo( S*0.23, S*0.49);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath();
-  ctx.moveTo(-S*0.23, S*0.49);
-  ctx.lineTo(-S*0.25, S*0.06);
-  ctx.lineTo( S*0.25, S*0.06);
-  ctx.lineTo( S*0.23, S*0.49);
-  ctx.closePath();
-  _shade(ctx,c,-S*0.25,0, S*0.25,0);
-  // turret platform
-  ctx.beginPath();
-  ctx.moveTo(-S*0.30, S*0.06);
-  ctx.lineTo(-S*0.30,-S*0.04);
-  ctx.lineTo( S*0.30,-S*0.04);
-  ctx.lineTo( S*0.30, S*0.06);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  // 3 merlons
-  [[-S*0.20, -S*0.04], [0, -S*0.04], [S*0.20, -S*0.04]].forEach(([mx,my])=>{
-    const mw=S*0.19, mh=S*0.30;
-    ctx.beginPath();
-    ctx.moveTo(mx-mw/2, my);
-    ctx.lineTo(mx-mw/2, my-mh);
-    ctx.lineTo(mx+mw/2, my-mh);
-    ctx.lineTo(mx+mw/2, my);
-    ctx.closePath();
-    _fs(ctx, c.fill, c.stroke, lw*0.85);
-    ctx.beginPath();
-    ctx.moveTo(mx-mw/2, my);
-    ctx.lineTo(mx-mw/2, my-mh);
-    ctx.lineTo(mx+mw/2, my-mh);
-    ctx.lineTo(mx+mw/2, my);
-    ctx.closePath();
-    _shade(ctx,c, mx-mw/2, my-mh, mx+mw/2, my);
-  });
-}
-
-// ── KNIGHT ───────────────────────────────────────────────────────
-function drawKnight_(ctx,c,S){
-  _base(ctx,c,S,0.34);
-  const lw = S*0.055;
-  // Single closed silhouette — horse head + neck facing right
-  ctx.beginPath();
-  // start bottom-left of neck
-  ctx.moveTo(-S*0.20, S*0.49);
-  ctx.bezierCurveTo(-S*0.26, S*0.26, -S*0.24, S*0.04, -S*0.18,-S*0.10);  // left neck
-  ctx.bezierCurveTo(-S*0.14,-S*0.24, -S*0.20,-S*0.46, -S*0.12,-S*0.64);  // neck arch up
-  ctx.bezierCurveTo(-S*0.04,-S*0.80,  S*0.06,-S*0.87,  S*0.16,-S*0.90);  // top of mane
-  ctx.bezierCurveTo( S*0.28,-S*0.93,  S*0.40,-S*0.88,  S*0.42,-S*0.76);  // ear tip
-  ctx.bezierCurveTo( S*0.46,-S*0.62,  S*0.38,-S*0.54,  S*0.30,-S*0.52);  // forehead slope
-  ctx.bezierCurveTo( S*0.44,-S*0.44,  S*0.48,-S*0.30,  S*0.42,-S*0.18);  // nose bridge
-  ctx.bezierCurveTo( S*0.38,-S*0.06,  S*0.28, S*0.00,  S*0.20, S*0.04);  // chin
-  ctx.bezierCurveTo( S*0.30, S*0.12,  S*0.30, S*0.30,  S*0.26, S*0.49);  // chest right
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  // shading pass (same path)
-  ctx.beginPath();
-  ctx.moveTo(-S*0.20, S*0.49);
-  ctx.bezierCurveTo(-S*0.26, S*0.26, -S*0.24, S*0.04, -S*0.18,-S*0.10);
-  ctx.bezierCurveTo(-S*0.14,-S*0.24, -S*0.20,-S*0.46, -S*0.12,-S*0.64);
-  ctx.bezierCurveTo(-S*0.04,-S*0.80,  S*0.06,-S*0.87,  S*0.16,-S*0.90);
-  ctx.bezierCurveTo( S*0.28,-S*0.93,  S*0.40,-S*0.88,  S*0.42,-S*0.76);
-  ctx.bezierCurveTo( S*0.46,-S*0.62,  S*0.38,-S*0.54,  S*0.30,-S*0.52);
-  ctx.bezierCurveTo( S*0.44,-S*0.44,  S*0.48,-S*0.30,  S*0.42,-S*0.18);
-  ctx.bezierCurveTo( S*0.38,-S*0.06,  S*0.28, S*0.00,  S*0.20, S*0.04);
-  ctx.bezierCurveTo( S*0.30, S*0.12,  S*0.30, S*0.30,  S*0.26, S*0.49);
-  ctx.closePath();
-  _shade(ctx,c, -S*0.26,-S*0.93, S*0.48, S*0.49);
-  // eye
-  ctx.beginPath(); ctx.arc(S*0.18,-S*0.64, S*0.058, 0, Math.PI*2);
-  ctx.fillStyle=c.stroke; ctx.fill();
-  ctx.beginPath(); ctx.arc(S*0.20,-S*0.66, S*0.022, 0, Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.82)'; ctx.fill();
-  // nostril
-  ctx.beginPath(); ctx.arc(S*0.38,-S*0.16, S*0.030, 0, Math.PI*2);
-  ctx.fillStyle=c.sh; ctx.fill();
-}
-
-// ── BISHOP ───────────────────────────────────────────────────────
-function drawBishop_(ctx,c,S){
-  _base(ctx,c,S,0.36);
-  const lw = S*0.055;
-  // tall body
-  ctx.beginPath();
-  ctx.moveTo(-S*0.20, S*0.49);
-  ctx.bezierCurveTo(-S*0.26, S*0.28, -S*0.22, S*0.06, -S*0.16,-S*0.06);
-  ctx.bezierCurveTo(-S*0.12,-S*0.16, -S*0.10,-S*0.30, -S*0.08,-S*0.42);
-  ctx.bezierCurveTo(-S*0.04,-S*0.56,  S*0.04,-S*0.56,  S*0.08,-S*0.42);
-  ctx.bezierCurveTo( S*0.10,-S*0.30,  S*0.12,-S*0.16,  S*0.16,-S*0.06);
-  ctx.bezierCurveTo( S*0.22, S*0.06,  S*0.26, S*0.28,  S*0.20, S*0.49);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath();
-  ctx.moveTo(-S*0.20, S*0.49);
-  ctx.bezierCurveTo(-S*0.26, S*0.28, -S*0.22, S*0.06, -S*0.16,-S*0.06);
-  ctx.bezierCurveTo(-S*0.12,-S*0.16, -S*0.10,-S*0.30, -S*0.08,-S*0.42);
-  ctx.bezierCurveTo(-S*0.04,-S*0.56,  S*0.04,-S*0.56,  S*0.08,-S*0.42);
-  ctx.bezierCurveTo( S*0.10,-S*0.30,  S*0.12,-S*0.16,  S*0.16,-S*0.06);
-  ctx.bezierCurveTo( S*0.22, S*0.06,  S*0.26, S*0.28,  S*0.20, S*0.49);
-  ctx.closePath();
-  _shade(ctx,c, -S*0.26, S*0.49, S*0.26,-S*0.56);
-  // collar
-  ctx.beginPath(); ctx.ellipse(0,-S*0.32, S*0.16, S*0.046, 0,0,Math.PI*2);
-  _fs(ctx, c.fill, c.stroke, lw*0.75);
-  // ball
-  ctx.beginPath(); ctx.arc(0,-S*0.50, S*0.20, 0, Math.PI*2);
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath(); ctx.arc(0,-S*0.50, S*0.20, 0, Math.PI*2);
-  _shade(ctx,c, -S*0.14,-S*0.68, S*0.14,-S*0.32);
-  // spike
-  ctx.beginPath();
-  ctx.moveTo(-S*0.044,-S*0.67); ctx.lineTo(0,-S*1.01); ctx.lineTo(S*0.044,-S*0.67);
-  ctx.closePath(); _fs(ctx, c.fill, c.stroke, lw*0.70);
-  // tip dot
-  ctx.beginPath(); ctx.arc(0,-S*0.68, S*0.052, 0, Math.PI*2);
-  _fs(ctx, c.fill, c.stroke, lw*0.65);
-  // cross engraved on ball
-  ctx.beginPath();
-  ctx.moveTo(-S*0.11,-S*0.50); ctx.lineTo(S*0.11,-S*0.50);
-  ctx.moveTo(0,-S*0.62);       ctx.lineTo(0,-S*0.38);
-  ctx.strokeStyle=c.detail; ctx.lineWidth=S*0.028; ctx.stroke();
-}
-
-// ── QUEEN ────────────────────────────────────────────────────────
-function drawQueen_(ctx,c,S){
-  _base(ctx,c,S,0.42);
-  const lw = S*0.055;
-  // wide bell body
-  ctx.beginPath();
-  ctx.moveTo(-S*0.32, S*0.49);
-  ctx.bezierCurveTo(-S*0.38, S*0.24, -S*0.32, S*0.02, -S*0.24,-S*0.10);
-  ctx.bezierCurveTo(-S*0.18,-S*0.20, -S*0.18,-S*0.34, -S*0.14,-S*0.44);
-  ctx.bezierCurveTo(-S*0.08,-S*0.58,  S*0.08,-S*0.58,  S*0.14,-S*0.44);
-  ctx.bezierCurveTo( S*0.18,-S*0.34,  S*0.18,-S*0.20,  S*0.24,-S*0.10);
-  ctx.bezierCurveTo( S*0.32, S*0.02,  S*0.38, S*0.24,  S*0.32, S*0.49);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath();
-  ctx.moveTo(-S*0.32, S*0.49);
-  ctx.bezierCurveTo(-S*0.38, S*0.24, -S*0.32, S*0.02, -S*0.24,-S*0.10);
-  ctx.bezierCurveTo(-S*0.18,-S*0.20, -S*0.18,-S*0.34, -S*0.14,-S*0.44);
-  ctx.bezierCurveTo(-S*0.08,-S*0.58,  S*0.08,-S*0.58,  S*0.14,-S*0.44);
-  ctx.bezierCurveTo( S*0.18,-S*0.34,  S*0.18,-S*0.20,  S*0.24,-S*0.10);
-  ctx.bezierCurveTo( S*0.32, S*0.02,  S*0.38, S*0.24,  S*0.32, S*0.49);
-  ctx.closePath();
-  _shade(ctx,c, -S*0.38, S*0.49, S*0.38,-S*0.58);
-  // crown band ring
-  ctx.beginPath(); ctx.ellipse(0,-S*0.46, S*0.23, S*0.066, 0,0,Math.PI*2);
-  _fs(ctx, c.fill, c.stroke, lw*0.80);
-  // 5 spikes + orbs  (outer shorter, middle tallest)
-  const spikeX = [-S*0.30,-S*0.15, 0, S*0.15, S*0.30];
-  const spikeH = [  S*0.22, S*0.30, S*0.36, S*0.30, S*0.22];
-  const orbR   = S*0.072;
-  spikeX.forEach((sx,i)=>{
-    const base=-S*0.46, tip=base-spikeH[i];
-    ctx.beginPath();
-    ctx.moveTo(sx-S*0.026, base);
-    ctx.lineTo(sx, tip+orbR);
-    ctx.lineTo(sx+S*0.026, base);
-    ctx.closePath();
-    _fs(ctx, c.fill, c.stroke, lw*0.70);
-    // orb
-    ctx.beginPath(); ctx.arc(sx, tip, orbR, 0, Math.PI*2);
-    _fs(ctx, c.fill, c.stroke, lw*0.70);
-  });
-  // waist groove
-  ctx.beginPath(); ctx.ellipse(0,-S*0.08, S*0.26, S*0.050, 0,0,Math.PI*2);
-  ctx.strokeStyle=c.detail; ctx.lineWidth=S*0.026; ctx.stroke();
-}
-
-// ── KING ─────────────────────────────────────────────────────────
-function drawKing_(ctx,c,S){
-  _base(ctx,c,S,0.42);
-  const lw = S*0.055;
-  // broad body
-  ctx.beginPath();
-  ctx.moveTo(-S*0.33, S*0.49);
-  ctx.bezierCurveTo(-S*0.40, S*0.22, -S*0.36, S*0.00, -S*0.28,-S*0.10);
-  ctx.bezierCurveTo(-S*0.22,-S*0.20, -S*0.22,-S*0.36, -S*0.18,-S*0.46);
-  ctx.bezierCurveTo(-S*0.12,-S*0.60,  S*0.12,-S*0.60,  S*0.18,-S*0.46);
-  ctx.bezierCurveTo( S*0.22,-S*0.36,  S*0.22,-S*0.20,  S*0.28,-S*0.10);
-  ctx.bezierCurveTo( S*0.36, S*0.00,  S*0.40, S*0.22,  S*0.33, S*0.49);
-  ctx.closePath();
-  _fs(ctx, c.fill, c.stroke, lw);
-  ctx.beginPath();
-  ctx.moveTo(-S*0.33, S*0.49);
-  ctx.bezierCurveTo(-S*0.40, S*0.22, -S*0.36, S*0.00, -S*0.28,-S*0.10);
-  ctx.bezierCurveTo(-S*0.22,-S*0.20, -S*0.22,-S*0.36, -S*0.18,-S*0.46);
-  ctx.bezierCurveTo(-S*0.12,-S*0.60,  S*0.12,-S*0.60,  S*0.18,-S*0.46);
-  ctx.bezierCurveTo( S*0.22,-S*0.36,  S*0.22,-S*0.20,  S*0.28,-S*0.10);
-  ctx.bezierCurveTo( S*0.36, S*0.00,  S*0.40, S*0.22,  S*0.33, S*0.49);
-  ctx.closePath();
-  _shade(ctx,c, -S*0.40, S*0.49, S*0.40,-S*0.60);
-  // crown band
-  ctx.beginPath(); ctx.ellipse(0,-S*0.48, S*0.25, S*0.072, 0,0,Math.PI*2);
-  _fs(ctx, c.fill, c.stroke, lw*0.80);
-  // three arch posts — rounded-top rectangles
-  const archX = [-S*0.21, 0, S*0.21];
-  const archH = [  S*0.30, S*0.44, S*0.30];
-  const archW =   S*0.155;
-  archX.forEach((ax,i)=>{
-    _post(ctx, ax, -S*0.48, archW, archH[i]);
-    _fs(ctx, c.fill, c.stroke, lw*0.75);
-    _post(ctx, ax, -S*0.48, archW, archH[i]);
-    _shade(ctx,c, ax-archW/2,-S*0.48-archH[i], ax+archW/2,-S*0.48);
-    // top orb on each arch
-    ctx.beginPath(); ctx.arc(ax,-S*0.48-archH[i]+archW/2, archW/2+S*0.008, 0,Math.PI*2);
-    _fs(ctx, c.fill, c.stroke, lw*0.65);
-  });
-  // king cross on centre post
-  const crossY = -S*0.48 - archH[1] - S*0.02;
-  ctx.beginPath();
-  ctx.moveTo(0, crossY+S*0.12); ctx.lineTo(0, crossY-S*0.22);
-  ctx.strokeStyle=c.stroke; ctx.lineWidth=S*0.10; ctx.lineCap='round'; ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-S*0.15, crossY-S*0.06); ctx.lineTo(S*0.15, crossY-S*0.06);
-  ctx.stroke(); ctx.lineCap='butt';
-  // waist groove
-  ctx.beginPath(); ctx.ellipse(0,-S*0.10, S*0.28, S*0.054, 0,0,Math.PI*2);
-  ctx.strokeStyle=c.detail; ctx.lineWidth=S*0.026; ctx.stroke();
-}
-
-// ── DISPATCH ─────────────────────────────────────────────────────
-function drawPiece(ctx,type,ck,cx,cy,sz){
-  const c = PIECE_COLORS[ck];
   ctx.save();
-  ctx.translate(cx, cy);
-  // soft cast shadow
-  ctx.shadowColor   = 'rgba(0,0,0,0.40)';
-  ctx.shadowBlur    = sz*0.18;
-  ctx.shadowOffsetX = sz*0.025;
-  ctx.shadowOffsetY = sz*0.10;
-  const S = sz*0.46;
-  ({P:drawPawn_,R:drawRook_,N:drawKnight_,B:drawBishop_,Q:drawQueen_,K:drawKing_}[type]||function(){})(ctx,c,S);
+  // drop shadow
+  ctx.shadowColor   = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur    = sz * 0.15;
+  ctx.shadowOffsetX = sz * 0.02;
+  ctx.shadowOffsetY = sz * 0.08;
+  // translate so (0,0) of the SVG maps to top-left of cell
+  ctx.translate(cx - sz/2, cy - sz/2);
+  ctx.scale(scale, scale);
+
+  const sv = _SVG[type];
+  if(!sv){ ctx.restore(); return; }
+
+  // ── 1. OUTLINE: draw thick dark stroke path ──────────────────
+  // This gives the bold cburnett outline
+  const outlinePath = _getPath(type, 'outline');
+  ctx.shadowColor = 'transparent'; // shadow only on first draw
+  ctx.lineWidth   = 1.5;
+  ctx.strokeStyle = c.stroke;
+  ctx.fillStyle   = c.stroke;  // outline fill = dark
+  if(type==='K'){
+    // King: outline is stroke-only paths
+    ctx.beginPath();
+    // body
+    const kbody = new Path2D('M 22.5,25 C 22.5,25 27,17.5 25.5,14.5 C 25.5,14.5 24.5,12 22.5,12 C 20.5,12 19.5,14.5 19.5,14.5 C 18,17.5 22.5,25 22.5,25 z M 11.5,37 C 17,40.5 27,40.5 32.5,37 L 32.5,30 C 32.5,30 41.5,25.5 38.5,19.5 C 34.5,13 25,16 22.5,23.5 L 22.5,27 L 22.5,23.5 C 19,16 9.5,13 6.5,19.5 C 3.5,25.5 11.5,30 11.5,30 z');
+    ctx.fillStyle = c.stroke;
+    ctx.fill(kbody);
+    ctx.stroke(kbody);
+  } else if(type==='Q'){
+    ctx.fill(outlinePath);
+    ctx.stroke(outlinePath);
+    // orb circles
+    _SVG.Q.orbs.forEach(od=>{
+      const op = new Path2D(od);
+      ctx.fill(op); ctx.stroke(op);
+    });
+  } else {
+    ctx.fill(outlinePath);
+    ctx.stroke(outlinePath);
+    if(type==='B') {
+      // bishop tip ball
+      const tb = _getPath('B','tipBall');
+      ctx.fill(tb); ctx.stroke(tb);
+    }
+  }
+
+  // ── 2. FILL: draw the piece fill colour ───────────────────────
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = c.stroke;
+  ctx.fillStyle   = c.fill;
+
+  if(type==='P'){
+    ctx.fill(outlinePath);
+    ctx.stroke(outlinePath);
+  } else if(type==='R'){
+    ctx.fill(outlinePath);
+    ctx.stroke(outlinePath);
+  } else if(type==='N'){
+    ctx.fill(outlinePath);
+    ctx.stroke(outlinePath);
+  } else if(type==='B'){
+    const hl = _getPath('B','highlight');
+    ctx.fill(hl);
+    ctx.stroke(hl);
+    // tip ball fill
+    const tb = _getPath('B','tipBall');
+    ctx.fill(tb); ctx.stroke(tb);
+  } else if(type==='Q'){
+    const hl = _getPath('Q','highlight');
+    ctx.fill(hl);
+    ctx.stroke(hl);
+    // orb fills
+    _SVG.Q.orbs.forEach(od=>{
+      const op = new Path2D(od);
+      ctx.fill(op); ctx.stroke(op);
+    });
+  } else if(type==='K'){
+    const khl = new Path2D('M 11.5,30 C 17,40.5 27,40.5 32.5,30 C 32.5,30 41.5,25.5 38.5,19.5 C 34.5,13 25,16 22.5,23.5 C 19,16 9.5,13 6.5,19.5 C 3.5,25.5 11.5,30 z');
+    ctx.fill(khl);
+    // ball at top of staff
+    const kball = new Path2D('M 22.5,25 C 22.5,25 27,17.5 25.5,14.5 C 25.5,14.5 24.5,12 22.5,12 C 20.5,12 19.5,14.5 19.5,14.5 C 18,17.5 22.5,25 22.5,25 z');
+    ctx.fill(kball); ctx.stroke(kball);
+  }
+
+  // ── 3. INNER HIGHLIGHT (white stroke on inner path) ──────────
+  ctx.strokeStyle = c.hl;
+  ctx.lineWidth   = 1.5;
+  ctx.fillStyle   = 'transparent';
+
+  if(type==='P'){
+    const phl = new Path2D(_SVG.P.hlStroke);
+    ctx.stroke(phl);
+  } else if(type==='R'){
+    ctx.stroke(_getPath('R','highlight'));
+  } else if(type==='N'){
+    ctx.stroke(_getPath('N','highlight'));
+  } else if(type==='B'){
+    // inner circle highlight on ball
+    const binner = new Path2D('M 22.5,15.5 A 5,5 0 1 0 22.5,25.5 A 5,5 0 1 0 22.5,15.5 z');
+    ctx.stroke(binner);
+  } else if(type==='Q'){
+    // crown highlight dots
+    _SVG.Q.orbs.forEach(od=>{
+      ctx.stroke(new Path2D(od));
+    });
+  } else if(type==='K'){
+    // cross
+    ctx.strokeStyle = c.stroke;
+    ctx.lineWidth   = 1.5;
+    const cross1 = new Path2D('M 22.5,11.63 L 22.5,6');
+    const cross2 = new Path2D('M 20,8 L 25,8');
+    ctx.stroke(cross1); ctx.stroke(cross2);
+    // crown arch highlight
+    ctx.strokeStyle = c.hl;
+    ctx.stroke(new Path2D('M 11.5,30 C 17,27 22.5,27 22.5,27 C 22.5,27 28,27 32.5,30'));
+  }
+
   ctx.restore();
 }
+
+
 
 // ── Board Renderer ────────────────────────────────────────────────
 function renderBoard(ctx,board,selSq,legals,lastMv,checkSqs,persp){
