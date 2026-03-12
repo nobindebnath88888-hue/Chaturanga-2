@@ -444,6 +444,34 @@ function isInCheck(board,color){
   return false;
 }
 
+// Checkmate: player is in check AND every possible move still leaves them in check
+// elimSetForCheck = Set of eliminated colors to use for this board state
+function isCheckmate(board, color, cr, elimSetForCheck){
+  // First must be in check
+  const prev = _elimSet;
+  _elimSet = elimSetForCheck; // temporarily set elimSet for isInCheck calls
+  if(!isInCheck(board, color)){
+    _elimSet = prev;
+    return false;
+  }
+  // Try every legal move — if any one escapes check, not checkmate
+  for(let i=0;i<64;i++){
+    const p=board[i];
+    if(!p||p.color!==color)continue;
+    const r=Math.floor(i/8), c=i%8;
+    const moves=genMoves(board,r,c,color,cr);
+    for(const mv of moves){
+      const nb=applyMove(board,mv,'Q');
+      if(!isInCheck(nb,color)){
+        _elimSet=prev;
+        return false; // found an escape
+      }
+    }
+  }
+  _elimSet=prev;
+  return true; // no escape → checkmate
+}
+
 function sqName(r,c){return String.fromCharCode(97+c)+(8-r)}
 
 // ── Deserialization ───────────────────────────────────────────────
@@ -801,6 +829,7 @@ function enterGame(){
     histIdx=-1; selSq=null; legals=[]; paint();
   });
   listenGame();listenChats();listenLog();
+  SFX.join();
 }
 
 function fitCanvas(c){
@@ -897,12 +926,20 @@ async function commitMove(move,promo){
   const newBoard=applyMove(board,move,promo);
   const newCR=updateCR(cr,move,board);
 
-  // Detect eliminations FIRST (so newly eliminated players are also skipped for next turn)
+  // Detect eliminations FIRST (king capture OR checkmate) — before computing next turn
   const newElim=[...elim];
+  const newElimSet=new Set(newElim); // live set used by isCheckmate/_elimSet during detection
   COLORS.filter(col=>col!==myColor&&!newElim.includes(col)).forEach(col=>{
     if(!isKingAlive(newBoard,col)){
+      // King was physically captured this move
       newElim.push(col);
-      sysChat((GS.players?.[col]?.name||col)+"\u2019s king was captured \u2014 eliminated! \u2620 Pieces stay on board (now gray).");
+      newElimSet.add(col);
+      SFX.eliminate(); sysChat((GS.players?.[col]?.name||col)+"'s king was captured — eliminated! ☠ Pieces stay on board (now gray).");
+    } else if(isCheckmate(newBoard, col, newCR, newElimSet)){
+      // King is in check with no legal escape
+      newElim.push(col);
+      newElimSet.add(col);
+      SFX.eliminate(); sysChat((GS.players?.[col]?.name||col)+" is in checkmate — eliminated! ☢ Pieces stay on board (now gray).");
     }
   });
 
@@ -924,6 +961,11 @@ async function commitMove(move,promo){
   const elimObj=newElim.length>0?Object.fromEntries(newElim.map((col,i)=>[i,col])):null;
 
   selSq=null;legals=[];
+
+  // Play sound for the move we just made
+  if(move.castle) SFX.castle();
+  else if(move.capture) SFX.capture();
+  else SFX.move();
 
   try{
     await update(ref(db2,`rooms/${roomId}`),{
@@ -959,6 +1001,7 @@ function listenGame(){
     // Auto-rotate to your perspective when it becomes your turn
     if(GS.currentTurn===myColor&&prevTurn!==myColor){
       perspective=myColor;selSq=null;legals=[];
+      SFX.yourTurn();
     }
     paint();updPlayers();updTurn();
   });
@@ -1071,10 +1114,152 @@ function updPlayers(){
 }
 
 function showWin(team){
+  SFX.victory();
   const el=document.getElementById('td');
   el.textContent='\uD83C\uDFC6 TEAM '+team+' WINS!';el.style.color='#ffe680';el.style.fontSize='16px';
   sysChat('\uD83C\uDFC6 TEAM '+team+' WINS!');
 }
+
+
+// ════════════════════════════════════════════════════════════════
+// SOUND ENGINE — Web Audio API, fully synthesised (no files)
+// ════════════════════════════════════════════════════════════════
+const SFX = (()=>{
+  let ctx = null;
+  function ac(){
+    if(!ctx) ctx = new (window.AudioContext||window.webkitAudioContext)();
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+
+  // Master gain so we can add a quick fade without clicking
+  function master(vol=0.7){
+    const g = ac().createGain();
+    g.gain.value = vol;
+    g.connect(ac().destination);
+    return g;
+  }
+
+  // Generic one-shot oscillator
+  function osc(type, freq, startT, dur, gainVal, dest, freqEnd){
+    const o = ac().createOscillator();
+    const g = ac().createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, startT);
+    if(freqEnd !== undefined) o.frequency.exponentialRampToValueAtTime(freqEnd, startT+dur);
+    g.gain.setValueAtTime(gainVal, startT);
+    g.gain.exponentialRampToValueAtTime(0.0001, startT+dur);
+    o.connect(g); g.connect(dest);
+    o.start(startT); o.stop(startT+dur+0.01);
+  }
+
+  // Noise burst (for wood/impact)
+  function noise(startT, dur, gainVal, dest, filterFreq=800){
+    const bufSize = ac().sampleRate * dur;
+    const buf = ac().createBuffer(1, bufSize, ac().sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++) data[i] = Math.random()*2-1;
+    const src = ac().createBufferSource();
+    src.buffer = buf;
+    const filt = ac().createBiquadFilter();
+    filt.type = 'bandpass';
+    filt.frequency.value = filterFreq;
+    filt.Q.value = 0.8;
+    const g = ac().createGain();
+    g.gain.setValueAtTime(gainVal, startT);
+    g.gain.exponentialRampToValueAtTime(0.0001, startT+dur);
+    src.connect(filt); filt.connect(g); g.connect(dest);
+    src.start(startT); src.stop(startT+dur+0.01);
+  }
+
+  return {
+    // ── 1. PIECE MOVE — soft wooden knock ──────────────────────
+    move(){
+      const m = master(0.45);
+      const t = ac().currentTime;
+      noise(t,      0.06, 0.9,  m, 600);
+      noise(t+0.01, 0.08, 0.4,  m, 300);
+      osc('sine', 220, t, 0.07, 0.2, m, 180);
+    },
+
+    // ── 2. PIECE CAPTURE — heavier thud + clash ─────────────────
+    capture(){
+      const m = master(0.65);
+      const t = ac().currentTime;
+      noise(t,      0.12, 1.2,  m, 400);
+      noise(t,      0.18, 0.6,  m, 1200);
+      osc('sawtooth', 180, t, 0.15, 0.35, m, 60);
+      osc('sine',     90,  t+0.05, 0.12, 0.2, m);
+    },
+
+    // ── 3. YOUR TURN — gentle chime ping ────────────────────────
+    yourTurn(){
+      const m = master(0.5);
+      const t = ac().currentTime;
+      // Two-note rising chime
+      osc('sine', 523, t,      0.5, 0.3, m);
+      osc('sine', 784, t+0.15, 0.6, 0.25, m);
+      // Overtone shimmer
+      osc('sine', 1047, t+0.15, 0.4, 0.08, m);
+    },
+
+    // ── 4. CASTLE — swoosh + two-part wooden clunk ──────────────
+    castle(){
+      const m = master(0.5);
+      const t = ac().currentTime;
+      noise(t,      0.04, 0.7, m, 700);
+      noise(t+0.12, 0.06, 0.8, m, 500);
+      osc('sine', 260, t, 0.08, 0.2, m);
+      osc('sine', 220, t+0.12, 0.08, 0.2, m);
+    },
+
+    // ── 5. ELIMINATION — dark falling boom ──────────────────────
+    eliminate(){
+      const m = master(0.7);
+      const t = ac().currentTime;
+      osc('sawtooth', 110, t, 0.8, 0.5, m, 40);
+      osc('sine',      80, t, 1.0, 0.9, m, 30);
+      noise(t, 0.25, 0.9, m, 200);
+      // Dramatic descending hits
+      [0, 0.18, 0.36].forEach((dt, i)=>{
+        osc('square', 140/(i+1), t+dt, 0.12, 0.3/(i+1), m);
+      });
+    },
+
+    // ── 6. JOIN ARENA — triumphant fanfare ──────────────────────
+    join(){
+      const m = master(0.55);
+      const t = ac().currentTime;
+      // Rising arpeggio C-E-G-C
+      const notes = [261, 329, 392, 523];
+      notes.forEach((f,i)=>{
+        osc('sine',     f, t+i*0.10, 0.35, 0.30, m);
+        osc('triangle', f, t+i*0.10, 0.35, 0.12, m);
+      });
+      // Final chord swell
+      [523, 659, 784].forEach(f=>{
+        osc('sine', f, t+0.42, 0.7, 0.15, m);
+      });
+    },
+
+    // ── 7. VICTORY — full fanfare ────────────────────────────────
+    victory(){
+      const m = master(0.6);
+      const t = ac().currentTime;
+      // Triumphant rising phrase
+      const melody = [392,392,392,523,659,523,659,784];
+      const times  = [0, 0.12, 0.24, 0.38, 0.52, 0.68, 0.78, 0.90];
+      melody.forEach((f,i)=>{
+        osc('sine',     f, t+times[i], 0.22, 0.30, m);
+        osc('triangle', f, t+times[i], 0.22, 0.10, m);
+      });
+      // Sustained final note with chord
+      [784, 988, 1175].forEach(f=>{
+        osc('sine', f, t+1.10, 1.2, 0.18, m);
+      });
+    },
+  };
+})();
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
