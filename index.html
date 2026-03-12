@@ -101,6 +101,13 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .to-dot.red{background:#c0392b}.to-dot.blue{background:#2471a3}.to-dot.green{background:#1e8449}.to-dot.gold{background:#b7950b}
 .to-name{color:#7080a0}
 .to-sep{color:#506080;margin:0 2px}
+.hnav{display:flex;align-items:center;gap:5px;margin-top:4px;justify-content:center}
+.hnbtn{background:rgba(180,140,50,.12);border:1px solid rgba(180,140,50,.3);border-radius:6px;color:#d4a017;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hnbtn:hover:not(:disabled){background:rgba(180,140,50,.26);color:#ffe680}
+.hnbtn:disabled{opacity:.3;cursor:default}
+.hlive{background:rgba(192,57,43,.15);border-color:rgba(192,57,43,.5);color:#e74c3c}
+.hlive:hover{background:rgba(192,57,43,.28)!important;color:#ff6b6b!important}
+.hpos{font-family:'Cinzel',serif;font-size:10px;color:#506080;min-width:36px;text-align:center}
 </style>
 </head>
 <body>
@@ -179,8 +186,13 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div id="si" class="bi" style="opacity:0">&#183;</div>
     <div class="ctrls">
      <div id="td">Waiting&hellip;</div>
-     <div id="cd" class="ca hidden">CHECK!</div>
      <button class="rotbtn" id="rotbtn">&#8635; Rotate</button>
+    </div>
+    <div class="hnav">
+     <button class="hnbtn" id="hprev" disabled>&#9664; Prev</button>
+     <span class="hpos" id="hpos">0/0</span>
+     <button class="hnbtn" id="hnext" disabled>Next &#9654;</button>
+     <button class="hnbtn hlive" id="hlive" style="display:none">&#9679; Live</button>
     </div>
    </div>
 
@@ -237,6 +249,8 @@ const PIECE_COLORS={
   blue: {fill:'#9ec4f0', stroke:'#000820', hl:'rgba(255,255,255,0.75)'},
   green:{fill:'#88d4a0', stroke:'#001408', hl:'rgba(255,255,255,0.75)'},
   gold: {fill:'#f0d870', stroke:'#200800', hl:'rgba(255,255,255,0.75)'},
+  // Eliminated players' pieces render in gray
+  gray: {fill:'#c8c8c8', stroke:'#404040', hl:'rgba(255,255,255,0.50)'},
 };
 
 // ── Board Setup ───────────────────────────────────────────────────
@@ -660,7 +674,7 @@ function drawPiece(ctx, type, colorKey, cx, cy, sz){
 
 
 // ── Board Renderer ────────────────────────────────────────────────
-function renderBoard(ctx,board,selSq,legals,lastMv,checkSqs,persp){
+function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
   const S=80;
   ctx.clearRect(0,0,640,640);
   for(let dr=0;dr<8;dr++){
@@ -673,17 +687,7 @@ function renderBoard(ctx,board,selSq,legals,lastMv,checkSqs,persp){
         const[fr,fc]=lastMv.from,[tr,tc]=lastMv.to;
         if((r===fr&&c===fc)||(r===tr&&c===tc)){ctx.fillStyle='rgba(205,185,0,.32)';ctx.fillRect(dc*S,dr*S,S,S);}
       }
-      // Check glow (enemy kings only)
-      if(checkSqs){
-        for(const[cr2,cc2] of checkSqs){
-          if(r===cr2&&c===cc2){
-            const g=ctx.createRadialGradient(dc*S+40,dr*S+40,0,dc*S+40,dr*S+40,56);
-            g.addColorStop(0,'rgba(255,0,0,.6)');g.addColorStop(1,'rgba(255,0,0,0)');
-            ctx.fillStyle=g;ctx.fillRect(dc*S,dr*S,S,S);
-          }
-        }
-      }
-      // Selected
+          // Selected
       if(selSq){
         const[sdr,sdc]=b2d(selSq[0],selSq[1],persp);
         if(dr===sdr&&dc===sdc){ctx.fillStyle='rgba(255,215,0,.5)';ctx.fillRect(dc*S,dr*S,S,S);}
@@ -708,13 +712,14 @@ function renderBoard(ctx,board,selSq,legals,lastMv,checkSqs,persp){
   // Pieces
   for(let dr=0;dr<8;dr++)for(let dc=0;dc<8;dc++){
     const[r,c]=d2b(dr,dc,persp);const p=gp(board,r,c);
-    if(p)drawPiece(ctx,p.type,p.color,dc*S+40,dr*S+40,S);
+    if(p){const ck=elimSet&&elimSet.has(p.color)?'gray':p.color;drawPiece(ctx,p.type,ck,dc*S+40,dr*S+40,S);}
   }
 }
 
 // ── App State ─────────────────────────────────────────────────────
 let db2,roomId,myColor,myName;
 let GS=null,selSq=null,legals=[],pendPromo=null;
+let moveHistory=[],histIdx=-1; // -1 = live view
 let perspective='red';
 const stat=document.getElementById('stat');
 
@@ -782,6 +787,19 @@ function enterGame(){
     const i=COLORS.indexOf(perspective);perspective=COLORS[(i+1)%4];
     selSq=null;legals=[];paint();
   });
+  document.getElementById('hprev').addEventListener('click',()=>{
+    if(histIdx<0) histIdx=moveHistory.length-1;
+    else if(histIdx>0) histIdx--;
+    paint();
+  });
+  document.getElementById('hnext').addEventListener('click',()=>{
+    if(histIdx>=0&&histIdx<moveHistory.length-1) histIdx++;
+    else histIdx=-1; // reached end = go live
+    paint();
+  });
+  document.getElementById('hlive').addEventListener('click',()=>{
+    histIdx=-1; selSq=null; legals=[]; paint();
+  });
   listenGame();listenChats();listenLog();
 }
 
@@ -793,21 +811,19 @@ function fitCanvas(c){
 function paint(){
   if(!GS)return;
   const ctx=document.getElementById('gc').getContext('2d');
-  const board=GS.board;
-  const elim=GS.eliminated||[];
-  // Check display: only show check for non-eliminated kings attacked by ENEMIES
-  const checkSqs=[];
-  COLORS.filter(col=>!elim.includes(col)).forEach(col=>{
-    if(isInCheck(board,col)){
-      for(let i=0;i<64;i++){const p=board[i];if(p&&p.type==='K'&&p.color===col){checkSqs.push([Math.floor(i/8),i%8]);break;}}
-    }
-  });
-  renderBoard(ctx,board,selSq,legals,GS.lastMove||null,checkSqs,perspective);
+  // History mode: show a past board snapshot
+  const boardToShow = histIdx>=0 && moveHistory[histIdx] ? moveHistory[histIdx].board : GS.board;
+  const elimToShow  = histIdx>=0 && moveHistory[histIdx] ? new Set(moveHistory[histIdx].elim||[]) : _elimSet;
+  const lastMvShow  = histIdx>=0 && moveHistory[histIdx] ? moveHistory[histIdx].lastMove : (GS.lastMove||null);
+  const selShow     = histIdx>=0 ? null : selSq;
+  const legShow     = histIdx>=0 ? [] : legals;
+  renderBoard(ctx,boardToShow,selShow,legShow,lastMvShow,perspective,elimToShow);
   const ct=GS.currentTurn;
   const glow={red:'#c0392b55',blue:'#2471a355',green:'#1e844955',gold:'#b7950b55'};
   document.getElementById('gc').style.boxShadow=
     `0 0 0 5px #7d4e1a,0 0 0 9px #4a2c0a,0 0 0 11px rgba(0,0,0,.6),0 18px 50px rgba(0,0,0,.8)`+
-    (ct&&glow[ct]?`,0 0 0 15px ${glow[ct]}`:'');
+    (ct&&!histIdx&&glow[ct]?`,0 0 0 15px ${glow[ct]}`:'');
+  updHistButtons();
 }
 
 // ── Click Handling ────────────────────────────────────────────────
@@ -881,22 +897,22 @@ async function commitMove(move,promo){
   const newBoard=applyMove(board,move,promo);
   const newCR=updateCR(cr,move,board);
 
-  // Next turn: alternating teams (Red→Green→Blue→Gold, skipping eliminated)
-  let nextIdx=(GS.turnIndex+1)%4;
-  for(let i=0;i<4;i++){
-    if(!elim.includes(TURN_ORDER[nextIdx]))break;
-    nextIdx=(nextIdx+1)%4;
-  }
-  const nextColor=TURN_ORDER[nextIdx];
-
-  // Detect eliminated players: if their king is captured THIS move
+  // Detect eliminations FIRST (so newly eliminated players are also skipped for next turn)
   const newElim=[...elim];
   COLORS.filter(col=>col!==myColor&&!newElim.includes(col)).forEach(col=>{
     if(!isKingAlive(newBoard,col)){
       newElim.push(col);
-      sysChat((GS.players?.[col]?.name||col)+"'s king was captured — eliminated! \u2620\nTheir pieces remain on the board.");
+      sysChat((GS.players?.[col]?.name||col)+"\u2019s king was captured \u2014 eliminated! \u2620 Pieces stay on board (now gray).");
     }
   });
+
+  // Next turn: skip ALL eliminated players (old + newly eliminated this move)
+  let nextIdx=(GS.turnIndex+1)%4;
+  for(let i=0;i<4;i++){
+    if(!newElim.includes(TURN_ORDER[nextIdx]))break;
+    nextIdx=(nextIdx+1)%4;
+  }
+  const nextColor=TURN_ORDER[nextIdx];
 
   // Win: only one team left
   const surviving=COLORS.filter(col=>!newElim.includes(col));
@@ -919,7 +935,13 @@ async function commitMove(move,promo){
       lastMove:{from:move.from,to:move.to,color:myColor},
       winner:winner||null,
     });
-    await push(ref(db2,`rooms/${roomId}/moveLog`),{notation:note,color:myColor,ts:Date.now()});
+    // Store board snapshot + elim state for move history browsing
+    const boardSnap=newBoard.map(p=>p?{type:p.type,color:p.color}:null);
+    await push(ref(db2,`rooms/${roomId}/moveLog`),{
+      notation:note,color:myColor,ts:Date.now(),
+      board:boardSnap, elim:newElim,
+      lastMove:{from:move.from,to:move.to,color:myColor}
+    });
   }catch(err){console.error('Move failed:',err);}
   if(winner)showWin(winner);
 }
@@ -938,7 +960,7 @@ function listenGame(){
     if(GS.currentTurn===myColor&&prevTurn!==myColor){
       perspective=myColor;selSq=null;legals=[];
     }
-    paint();updPlayers();updTurn();updCheck();
+    paint();updPlayers();updTurn();
   });
 }
 
@@ -951,11 +973,26 @@ function listenChats(){
 function listenLog(){
   onValue(ref(db2,`rooms/${roomId}/moveLog`),snap=>{
     if(!snap.exists())return;
+    const entries=Object.values(snap.val()).sort((a,b)=>a.ts-b.ts);
+    // Rebuild move history for browsing
+    moveHistory=entries.map(e=>({
+      board: e.board ? deserBoard(e.board) : null,
+      elim:  e.elim  ? deserElim(e.elim)  : [],
+      lastMove: e.lastMove||null,
+      notation: e.notation, color: e.color
+    }));
+    // Render log list
     const log=document.getElementById('ml');log.innerHTML='';
-    Object.values(snap.val()).sort((a,b)=>a.ts-b.ts).forEach(e=>{
-      const d=document.createElement('div');d.className='le '+e.color;d.textContent=e.notation;log.appendChild(d);
+    entries.forEach((e,i)=>{
+      const d=document.createElement('div');
+      d.className='le '+e.color;
+      d.textContent=(i+1)+'. '+e.notation;
+      d.style.cursor='pointer';
+      d.addEventListener('click',()=>{ histIdx=i; paint(); });
+      log.appendChild(d);
     });
     log.scrollTop=log.scrollHeight;
+    updHistButtons();
   });
 }
 
@@ -994,6 +1031,14 @@ function sysChat(text){
       {system:true,text,ts:Date.now(),color:'system',name:'System'}));
 }
 
+function updHistButtons(){
+  const tot=moveHistory.length;
+  const live=histIdx<0;
+  document.getElementById('hprev').disabled=(histIdx===0||(live&&tot===0));
+  document.getElementById('hnext').disabled=live;
+  document.getElementById('hlive').style.display=live?'none':'inline-block';
+  document.getElementById('hpos').textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
+}
 function updTurn(){
   if(!GS)return;
   const ct=GS.currentTurn;const el=document.getElementById('td');
@@ -1001,12 +1046,6 @@ function updTurn(){
   const n=GS.players?.[ct]?.name||ct;
   el.textContent=ct===myColor?'\u26a1 YOUR TURN':n+"'s turn";
   el.style.color=ct===myColor?'#ffe680':'#7080a0';
-}
-
-function updCheck(){
-  if(!GS)return;
-  const el=document.getElementById('cd');
-  isInCheck(GS.board,myColor)?el.classList.remove('hidden'):el.classList.add('hidden');
 }
 
 function updPlayers(){
