@@ -101,6 +101,23 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .to-dot.red{background:#c0392b}.to-dot.blue{background:#2471a3}.to-dot.green{background:#1e8449}.to-dot.gold{background:#b7950b}
 .to-name{color:#7080a0}
 .to-sep{color:#506080;margin:0 2px}
+.timerbar{display:flex;align-items:center;gap:6px;padding:3px 6px;font-family:'Cinzel',serif;font-size:9px}
+.tbtrack{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.tbfill{height:100%;border-radius:3px;transition:width .9s linear}
+.tbfill.red{background:#c0392b}.tbfill.blue{background:#2471a3}.tbfill.green{background:#1e8449}.tbfill.gold{background:#b7950b}
+.tbfill.low{background:#e74c3c;animation:pu 0.6s ease infinite}
+.tbtime{min-width:32px;text-align:right;color:#7080a0;font-size:9px}
+.actbtn{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.35);border-radius:6px;color:#e74c3c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;margin:2px}
+.actbtn:hover{background:rgba(231,76,60,.28);color:#ff8070}
+.kbtn{background:rgba(150,80,200,.12);border:1px solid rgba(150,80,200,.35);border-radius:6px;color:#c070f0;font-family:'Cinzel',serif;font-size:9px;padding:3px 7px;cursor:pointer;transition:all .15s;margin-left:auto;flex-shrink:0}
+.kbtn:hover{background:rgba(150,80,200,.28)}
+.kbtn:disabled{opacity:.3;cursor:default}
+.vote-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:center;justify-content:center}
+.vote-box{background:rgba(8,14,30,.98);border:1px solid rgba(180,140,50,.3);border-radius:14px;padding:24px 32px;text-align:center;max-width:340px}
+.vote-box h3{font-family:'Cinzel',serif;font-size:14px;letter-spacing:.1em;color:#d4a017;margin-bottom:10px}
+.vote-box p{font-size:13px;color:#9090a0;margin-bottom:16px}
+.vote-btns{display:flex;gap:10px;justify-content:center}
+.inactivity-warn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(231,76,60,.92);color:#fff;font-family:'Cinzel',serif;font-size:13px;letter-spacing:.1em;padding:10px 22px;border-radius:8px;pointer-events:none;z-index:150;text-align:center}
 .hnav{display:flex;align-items:center;gap:5px;margin-top:4px;justify-content:center}
 .hnbtn{background:rgba(180,140,50,.12);border:1px solid rgba(180,140,50,.3);border-radius:6px;color:#d4a017;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .hnbtn:hover:not(:disabled){background:rgba(180,140,50,.26);color:#ffe680}
@@ -187,6 +204,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div class="ctrls">
      <div id="td">Waiting&hellip;</div>
      <button class="rotbtn" id="rotbtn">&#8635; Rotate</button>
+     <button class="actbtn" id="resbtn">&#9873; Resign</button>
     </div>
     <div class="hnav">
      <button class="hnbtn" id="hprev" disabled>&#9664; Prev</button>
@@ -214,7 +232,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getDatabase,ref,set,get,push,onValue,update}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import{getDatabase,ref,set,get,push,onValue,update,remove}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const FB={
   apiKey:"AIzaSyApNYVFMJXejUINjpioP4fh6s0KOjcFWc0",
@@ -703,12 +721,15 @@ async function doJoin(){
   try{
     const snap=await get(ref(db2,`rooms/${rid}`));
     if(!snap.exists()){
+      const TIMER_MS=300000; // 5 minutes per player
       await set(ref(db2,`rooms/${rid}`),{
         board:initBoard(),
         currentTurn:'red',turnIndex:0,
         castlingRights:initCastlingRights(),
         eliminated:null,lastMove:null,winner:null,
         players:{[myColor]:{name:myName,online:true}},
+        timers:{red:TIMER_MS,blue:TIMER_MS,green:TIMER_MS,gold:TIMER_MS},
+        turnStartedAt:null, gameStarted:false,
         createdAt:Date.now()
       });
       setStat('Room created! Share ID: '+rid);
@@ -757,6 +778,7 @@ function enterGame(){
     histIdx=-1; selSq=null; legals=[]; paint();
   });
   initPieces(); // load + tint real SVG pieces from CDN
+  setupResign();
   listenGame();listenChats();listenLog();
   SFX.join();
 }
@@ -897,6 +919,14 @@ async function commitMove(move,promo){
   else SFX.move();
 
   try{
+    // Deduct time used this turn from current player's clock
+    const now=Date.now();
+    const rawTimers=GS.timers||{red:300000,blue:300000,green:300000,gold:300000};
+    const newTimers={...rawTimers};
+    if(GS.gameStarted&&GS.turnStartedAt){
+      const used=now-GS.turnStartedAt;
+      newTimers[myColor]=Math.max(0,(rawTimers[myColor]||300000)-used);
+    }
     await update(ref(db2,`rooms/${roomId}`),{
       board:newBoard,
       currentTurn:winner?null:nextColor,
@@ -905,6 +935,9 @@ async function commitMove(move,promo){
       eliminated:elimObj,
       lastMove:{from:move.from,to:move.to,color:myColor},
       winner:winner||null,
+      timers:newTimers,
+      turnStartedAt:winner?null:now,
+      gameStarted:true,
     });
     // Store board snapshot + elim state for move history browsing
     const boardSnap=newBoard.map(p=>p?{type:p.type,color:p.color}:null);
@@ -918,6 +951,9 @@ async function commitMove(move,promo){
 }
 
 // ── Firebase ──────────────────────────────────────────────────────
+let _timerInterval=null;
+let _inactInterval=null;
+
 function listenGame(){
   onValue(ref(db2,`rooms/${roomId}`),snap=>{
     if(!snap.exists())return;
@@ -925,15 +961,111 @@ function listenGame(){
     GS=snap.val();
     GS.board=deserBoard(GS.board);
     GS.eliminated=deserElim(GS.eliminated);
-    // Keep _elimSet in sync so isFriend() knows which pieces are capturable by all
     _elimSet=new Set(GS.eliminated);
-    // Auto-rotate to your perspective when it becomes your turn
     if(GS.currentTurn===myColor&&prevTurn!==myColor){
       perspective=myColor;selSq=null;legals=[];
       SFX.yourTurn();
     }
+    // Check if kick vote passed for anyone
+    checkKickVotes();
     paint();updPlayers();updTurn();
+    startTimerTick();
+    resetInactivityWatch();
   });
+}
+
+// ── Client-side timer tick (updates display every second) ─────────
+function startTimerTick(){
+  if(_timerInterval) clearInterval(_timerInterval);
+  if(!GS||!GS.gameStarted||GS.winner)return;
+  _timerInterval=setInterval(()=>{
+    updTimers();
+    // Check if current player's timer hit 0
+    if(GS&&GS.currentTurn&&GS.gameStarted&&GS.turnStartedAt){
+      const raw=GS.timers||{};
+      const used=Date.now()-GS.turnStartedAt;
+      const left=(raw[GS.currentTurn]||0)-used;
+      if(left<=0&&GS.currentTurn===myColor){
+        clearInterval(_timerInterval);
+        doAutoResign(myColor,'time');
+      } else if(left>0&&left<30000&&Math.ceil(left/1000)%10===0){
+        SFX.lowTime();
+      }
+    }
+  },1000);
+}
+
+// ── Inactivity: if it's your turn and you haven't moved in 40s ────
+function resetInactivityWatch(){
+  if(_inactInterval) clearInterval(_inactInterval);
+  if(!GS||!GS.gameStarted||GS.winner||GS.currentTurn!==myColor)return;
+  const INACT_MS=40000;
+  const started=GS.turnStartedAt||Date.now();
+  let warnShown=false;
+  _inactInterval=setInterval(()=>{
+    const elapsed=Date.now()-started;
+    if(elapsed>=INACT_MS){
+      clearInterval(_inactInterval);
+      doAutoResign(myColor,'inactivity');
+    } else if(elapsed>=INACT_MS-10000&&!warnShown){
+      warnShown=true;
+      showInactivityWarning(Math.ceil((INACT_MS-elapsed)/1000));
+    }
+  },1000);
+}
+
+function showInactivityWarning(secs){
+  let w=document.getElementById('inact-warn');
+  if(!w){
+    w=document.createElement('div');
+    w.id='inact-warn';w.className='inactivity-warn';
+    document.querySelector('.bc').appendChild(w);
+  }
+  w.textContent='⚠ Move in '+secs+'s or auto-resign!';
+  setTimeout(()=>w.remove(),10500);
+}
+
+async function doAutoResign(color,reason){
+  if(!GS||GS.winner)return;
+  const elim=GS.eliminated||[];
+  if(elim.includes(color))return;
+  sysChat((GS.players?.[color]?.name||color)+' was auto-resigned ('+reason+'). ⏱');
+  SFX.eliminate();
+  await forceEliminate(color);
+}
+
+// Core elimination helper (used by resign + kick + auto-resign)
+async function forceEliminate(color){
+  if(!GS)return;
+  const elim=GS.eliminated||[];
+  if(elim.includes(color))return;
+  const newElim=[...elim,color];
+  const newElimSet=new Set(newElim);
+  const elimObj=Object.fromEntries(newElim.map((c,i)=>[i,c]));
+  // Advance turn past eliminated player if it was their turn
+  let nextIdx=GS.turnIndex;
+  let nextColor=GS.currentTurn;
+  if(GS.currentTurn===color){
+    nextIdx=(GS.turnIndex+1)%4;
+    for(let i=0;i<4;i++){
+      if(!newElim.includes(TURN_ORDER[nextIdx]))break;
+      nextIdx=(nextIdx+1)%4;
+    }
+    nextColor=TURN_ORDER[nextIdx];
+  }
+  const surviving=COLORS.filter(c=>!newElim.includes(c));
+  const teamsLeft=[...new Set(surviving.map(c=>TEAMS[c]))];
+  const winner=teamsLeft.length===1?teamsLeft[0]:null;
+  try{
+    await update(ref(db2,`rooms/${roomId}`),{
+      eliminated:elimObj,
+      currentTurn:winner?null:nextColor,
+      turnIndex:nextIdx,
+      turnStartedAt:Date.now(),
+      winner:winner||null,
+    });
+    if(winner)showWin(winner);
+  }catch(e){console.error(e);}
 }
 
 function listenChats(){
@@ -1011,6 +1143,82 @@ function updHistButtons(){
   document.getElementById('hlive').style.display=live?'none':'inline-block';
   document.getElementById('hpos').textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
 }
+// -- Timer display
+function fmtTime(ms){
+  if(ms<=0)return'0:00';
+  const s=Math.ceil(ms/1000);
+  return Math.floor(s/60)+':'+(s%60).toString().padStart(2,'0');
+}
+function updTimers(){
+  if(!GS||!GS.gameStarted)return;
+  const raw=GS.timers||{red:300000,blue:300000,green:300000,gold:300000};
+  const ct=GS.currentTurn;
+  TURN_ORDER.forEach(col=>{
+    const el=document.getElementById('tmr-'+col);
+    if(!el)return;
+    const base=raw[col]||0;
+    const used=(ct===col&&GS.turnStartedAt)?Math.max(0,Date.now()-GS.turnStartedAt):0;
+    const left=Math.max(0,base-used);
+    const pct=Math.min(100,left/3000);
+    el.querySelector('.tbfill').style.width=pct+'%';
+    const low=left<30000;
+    el.querySelector('.tbfill').className='tbfill '+col+(low?' low':'');
+    el.querySelector('.tbtime').textContent=fmtTime(left);
+  });
+}
+
+// -- Resign
+function setupResign(){
+  document.getElementById('resbtn').addEventListener('click',()=>{
+    if(!GS||GS.winner)return;
+    const elim=GS.eliminated||[];
+    if(elim.includes(myColor))return;
+    showConfirm('Resign from the game?','Yes, resign',async()=>{
+      sysChat((GS.players?.[myColor]?.name||myColor)+' resigned. \u{1F3F3}');
+      SFX.eliminate();
+      await forceEliminate(myColor);
+    });
+  });
+}
+
+// -- Vote to kick
+async function voteKick(target){
+  if(!GS||!roomId)return;
+  await set(ref(db2,`rooms/${roomId}/kickVotes/${target}/${myColor}`),true);
+}
+
+async function checkKickVotes(){
+  if(!GS||!GS.kickVotes)return;
+  const elim=GS.eliminated||[];
+  for(const [target,votes] of Object.entries(GS.kickVotes||{})){
+    if(elim.includes(target))continue;
+    const voterCount=Object.keys(votes||{}).length;
+    const eligible=COLORS.filter(c=>!elim.includes(c)&&c!==target);
+    if(eligible.length===0)continue;
+    const needed=Math.ceil(eligible.length/2);
+    if(voterCount>=needed){
+      await remove(ref(db2,`rooms/${roomId}/kickVotes/${target}`));
+      sysChat((GS.players?.[target]?.name||target)+' was voted out! \u{1F6AA}');
+      SFX.eliminate();
+      await forceEliminate(target);
+      return;
+    }
+  }
+}
+
+// -- Simple confirm modal
+function showConfirm(msg,yesLabel,onYes){
+  const ov=document.createElement('div');ov.className='vote-overlay';
+  ov.innerHTML=`<div class="vote-box"><h3>Confirm</h3><p>${esc(msg)}</p>`
+    +`<div class="vote-btns">`
+    +`<button class="btn" id="_cy">${esc(yesLabel)}</button>`
+    +`<button class="actbtn" id="_cn">Cancel</button>`
+    +`</div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#_cy').onclick=()=>{ov.remove();onYes();};
+  ov.querySelector('#_cn').onclick=()=>ov.remove();
+}
+
 function updTurn(){
   if(!GS)return;
   const ct=GS.currentTurn;const el=document.getElementById('td');
@@ -1023,23 +1231,44 @@ function updTurn(){
 function updPlayers(){
   if(!GS)return;
   const cont=document.getElementById('pl');cont.innerHTML='';
+  const elim=GS.eliminated||[];
   TURN_ORDER.forEach(color=>{
     const p=GS.players?.[color];
-    const isElim=(GS.eliminated||[]).includes(color);
+    const isElim=elim.includes(color);
     const isActive=GS.currentTurn===color;
+    const myVoted=!!(GS.kickVotes&&GS.kickVotes[color]&&GS.kickVotes[color][myColor]);
+    const kickCount=GS.kickVotes&&GS.kickVotes[color]?Object.keys(GS.kickVotes[color]).length:0;
+    const canKick=!isElim&&color!==myColor&&!elim.includes(myColor)&&!GS.winner;
     const row=document.createElement('div');row.className='pr';
+    const nameStr=p?.name?esc(p.name):'(waiting…)';
+    const elimStyle=isElim?'opacity:.4;text-decoration:line-through':'';
     row.innerHTML=
-      `<div class="pd ${color}"></div>`+
-      `<span class="pnl" style="${isElim?'opacity:.4;text-decoration:line-through':''}">
-        ${p?.name?esc(p.name):'(waiting\u2026)'}
-        <small style="color:#506080;margin-left:3px">\u2694${TEAMS[color]}</small>
-        ${isElim?'<small style="color:#e74c3c;margin-left:3px">watching</small>':''}
-      </span>`+
-      `<span class="ps ${isActive&&!isElim?'on':''}">
-        ${isElim?'\u2620':isActive?'\u25b6':p?.name?'\u25cf':'\u25cb'}
-      </span>`;
+      '<div class="pd '+color+'"></div>'
+      +'<span class="pnl" style="'+elimStyle+'">'
+      +nameStr
+      +'<small style="color:#506080;margin-left:3px">\u2694'+TEAMS[color]+'</small>'
+      +(isElim?'<small style="color:#e74c3c;margin-left:3px">out</small>':'')
+      +'</span>'
+      +'<span class="ps '+(isActive&&!isElim?'on':'')+'">'
+      +(isElim?'\u2620':isActive?'\u25b6':p?.name?'\u25cf':'\u25cb')
+      +'</span>';
+    if(canKick){
+      const kb=document.createElement('button');
+      kb.className='kbtn'; kb.title='Vote to kick';
+      kb.textContent=myVoted?'kick ('+(kickCount)+')':' kick';
+      kb.disabled=myVoted;
+      kb.addEventListener('click',()=>voteKick(color));
+      row.appendChild(kb);
+    }
     cont.appendChild(row);
+    if(!isElim&&GS.gameStarted){
+      const tb=document.createElement('div');
+      tb.className='timerbar';tb.id='tmr-'+color;
+      tb.innerHTML='<div class="tbtrack"><div class="tbfill '+color+'" style="width:100%"></div></div><span class="tbtime">5:00</span>';
+      cont.appendChild(tb);
+    }
   });
+  updTimers();
 }
 
 function showWin(team){
@@ -1051,134 +1280,124 @@ function showWin(team){
 
 
 // ════════════════════════════════════════════════════════════════
-// SOUND ENGINE — wooden chess piece sounds (Web Audio API)
+// SOUND ENGINE — hyper-realistic wooden chess board sounds
+// Technique: filtered white noise + body resonance + click transient
+// Models: pick-up click, air-thump, wood-on-wood, hollow-body ring
 // ════════════════════════════════════════════════════════════════
-const SFX = (()=>{
-  let ctx = null;
-  function ac(){
-    if(!ctx) ctx = new (window.AudioContext||window.webkitAudioContext)();
-    if(ctx.state==='suspended') ctx.resume();
-    return ctx;
-  }
-  function gain(vol){ const g=ac().createGain(); g.gain.value=vol; g.connect(ac().destination); return g; }
+const SFX=(()=>{
+  let C=null;
+  const ac=()=>{ if(!C)C=new(window.AudioContext||window.webkitAudioContext)(); if(C.state='suspended')C.resume(); return C; };
+  const G=(v)=>{ const g=ac().createGain(); g.gain.value=v; g.connect(ac().destination); return g; };
 
-  // Noise burst — the core of every wooden thud
-  function woodNoise(t, dur, vol, lo, hi, dest){
-    const sz = ac().sampleRate * dur;
-    const buf = ac().createBuffer(1, Math.ceil(sz), ac().sampleRate);
-    const d = buf.getChannelData(0);
-    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
-    const src = ac().createBufferSource();
-    src.buffer = buf;
-    // Band-pass to carve out the woody "clunk" frequency
-    const bp = ac().createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = (lo+hi)/2;
-    bp.Q.value = 1.2;
-    const hp = ac().createBiquadFilter();
-    hp.type = 'highpass'; hp.frequency.value = lo;
-    const g = ac().createGain();
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(dest);
-    src.start(t); src.stop(t+dur+0.05);
+  // === CORE: realistic wooden thud ===
+  // attack  = short high-freq click (fingernail/edge impact)
+  // body    = bandpass noise in 300-900Hz (hollow wood resonance)
+  // thump   = low-freq sine (mass hitting board)
+  function woodThud(t, vol, pitch, dur, dest){
+    const sr=ac().sampleRate;
+    // --- attack click: very short broadband burst ---
+    const cBuf=ac().createBuffer(1,Math.ceil(sr*0.008),sr);
+    const cD=cBuf.getChannelData(0);
+    for(let i=0;i<cD.length;i++) cD[i]=(Math.random()*2-1)*Math.exp(-i/(sr*0.002));
+    const cSrc=ac().createBufferSource(); cSrc.buffer=cBuf;
+    const cGain=ac().createGain(); cGain.gain.setValueAtTime(vol*2.5,t); cGain.gain.exponentialRampToValueAtTime(0.0001,t+0.015);
+    cSrc.connect(cGain); cGain.connect(dest); cSrc.start(t);
+
+    // --- body resonance: bandpass noise, 2 layers ---
+    for(const [lo,hi,q,g2] of [[pitch*0.6,pitch*1.4,2.5,vol],[pitch*1.8,pitch*3,1.8,vol*0.4]]){
+      const bLen=Math.ceil(sr*dur);
+      const buf=ac().createBuffer(1,bLen,sr);
+      const d=buf.getChannelData(0);
+      // pre-bake decay envelope into noise
+      for(let i=0;i<bLen;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(sr*dur*0.55));
+      const src=ac().createBufferSource(); src.buffer=buf;
+      const bp=ac().createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=(lo+hi)/2; bp.Q.value=q;
+      const lp=ac().createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=hi;
+      const gn=ac().createGain(); gn.gain.setValueAtTime(g2,t+0.003); gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      src.connect(bp); bp.connect(lp); lp.connect(gn); gn.connect(dest); src.start(t+0.002);
+    }
+
+    // --- thump: short decaying sine (board bounce) ---
+    const osc=ac().createOscillator(); const og=ac().createGain();
+    osc.type='sine'; osc.frequency.setValueAtTime(pitch*0.35,t); osc.frequency.exponentialRampToValueAtTime(pitch*0.18,t+dur*0.5);
+    og.gain.setValueAtTime(vol*0.45,t+0.003); og.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.7);
+    osc.connect(og); og.connect(dest); osc.start(t); osc.stop(t+dur+0.05);
   }
-  // Low body-resonance tone
-  function bodyTone(t, freq, dur, vol, dest){
-    const o = ac().createOscillator();
-    const g = ac().createGain();
-    o.type = 'sine'; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
-    o.connect(g); g.connect(dest);
-    o.start(t); o.stop(t+dur+0.05);
-  }
-  // Short sine ping for musical cues
-  function ping(t, freq, dur, vol, dest){
-    const o = ac().createOscillator();
-    const g = ac().createGain();
-    o.type = 'sine'; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, t);
-    g.gain.setTargetAtTime(0, t+dur*0.2, dur*0.25);
-    o.connect(g); g.connect(dest);
-    o.start(t); o.stop(t+dur+0.05);
+
+  function ping(t,f,dur,vol,dest){
+    const o=ac().createOscillator(),g=ac().createGain();
+    o.type='sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(vol,t); g.gain.setTargetAtTime(0,t+dur*0.15,dur*0.22);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t+dur+0.1);
   }
 
   return {
-    // ── PIECE MOVE — single wooden knock on board ──────────────
+    // Quiet piece lift + solid landing — like sliding a rook on a wooden board
     move(){
-      const m=gain(0.7); const t=ac().currentTime;
-      woodNoise(t,      0.04, 1.0, 500,  1800, m); // attack click
-      woodNoise(t+0.01, 0.07, 0.5, 200,  600,  m); // body thud
-      bodyTone (t,      130,  0.06, 0.18, m);       // resonance
+      const m=G(0.8), t=ac().currentTime;
+      // tiny pick-up tap
+      woodThud(t,      0.25, 1400, 0.04, m);
+      // landing thud — the main "clonk"
+      woodThud(t+0.06, 1.0,  720,  0.18, m);
     },
 
-    // ── CAPTURE — heavier double-knock ─────────────────────────
+    // Heavier — capturing piece has more weight, displaced piece rattles
     capture(){
-      const m=gain(0.8); const t=ac().currentTime;
-      woodNoise(t,      0.03, 1.4, 600,  2200, m); // sharp attack
-      woodNoise(t,      0.10, 0.9, 180,  500,  m); // low thud
-      woodNoise(t+0.07, 0.06, 0.7, 400,  1200, m); // second knock (piece settling)
-      bodyTone (t,      100,  0.12, 0.25, m);
+      const m=G(0.9), t=ac().currentTime;
+      woodThud(t,      1.3,  600,  0.22, m); // heavy landing
+      woodThud(t+0.06, 0.5,  1100, 0.08, m); // captured piece bouncing off
+      woodThud(t+0.12, 0.3,  850,  0.06, m); // settling
     },
 
-    // ── CASTLE — swoosh then two knocks ────────────────────────
+    // Castle: king slid + rook placed separately
     castle(){
-      const m=gain(0.65); const t=ac().currentTime;
-      woodNoise(t,      0.05, 0.8, 500,  1800, m);
-      bodyTone (t,      120,  0.07, 0.15, m);
-      woodNoise(t+0.14, 0.05, 0.9, 500,  1800, m); // rook arriving
-      bodyTone (t+0.14, 110,  0.07, 0.15, m);
+      const m=G(0.75), t=ac().currentTime;
+      woodThud(t,      0.6,  800,  0.14, m); // king lands
+      woodThud(t+0.22, 0.8,  650,  0.14, m); // rook lands
     },
 
-    // ── YOUR TURN — two gentle chimes ──────────────────────────
+    // Gentle 2-note wooden xylophone tap — your turn notification
     yourTurn(){
-      const m=gain(0.45); const t=ac().currentTime;
-      ping(t,      880, 0.5, 0.4, m);
-      ping(t+0.18, 1175, 0.5, 0.3, m);
+      const m=G(0.4), t=ac().currentTime;
+      woodThud(t,      0.3, 1800, 0.06, m);
+      woodThud(t+0.15, 0.3, 2200, 0.06, m);
+      ping(t+0.02, 880, 0.35, 0.2, m);
+      ping(t+0.17, 1175, 0.4, 0.15, m);
     },
 
-    // ── ELIMINATION — heavy falling boom + rattling ─────────────
+    // Pieces knocked over and scattered — multiple irregular thumps
     eliminate(){
-      const m=gain(0.75); const t=ac().currentTime;
-      // Heavy crash of pieces scattering
-      woodNoise(t,      0.20, 1.5, 250,  900,  m);
-      woodNoise(t,      0.08, 1.2, 1000, 3000, m);
-      woodNoise(t+0.12, 0.15, 0.8, 300,  800,  m);
-      bodyTone (t,       60,  0.4, 0.4, m);
-      // Rattling pieces settling
-      [0.25, 0.38, 0.50].forEach(dt=>{
-        woodNoise(t+dt, 0.04, 0.3*(1-dt), 400, 1200, m);
-      });
+      const m=G(0.85), t=ac().currentTime;
+      woodThud(t,      1.2,  450,  0.35, m);
+      woodThud(t+0.08, 0.7,  700,  0.18, m);
+      woodThud(t+0.18, 0.5,  900,  0.12, m);
+      woodThud(t+0.28, 0.35, 1100, 0.08, m);
+      woodThud(t+0.36, 0.25, 800,  0.06, m);
     },
 
-    // ── JOIN — ascending fanfare on wooden board ─────────────────
+    // Setting up the board: rapid series of pieces being placed
     join(){
-      const m=gain(0.5); const t=ac().currentTime;
-      // Piece-set being placed: rapid series of wooden taps
-      [0, 0.07, 0.13, 0.18, 0.23, 0.27].forEach((dt,i)=>{
-        woodNoise(t+dt, 0.05, 0.6+i*0.07, 400+i*80, 1200+i*100, m);
-        bodyTone(t+dt, 110+i*15, 0.06, 0.08, m);
-      });
-      // Then a bright musical greeting
-      [523, 659, 784, 1047].forEach((f,i)=>{
-        ping(t+0.35+i*0.11, f, 0.5, 0.22-i*0.02, m);
-      });
+      const m=G(0.55), t=ac().currentTime;
+      const offsets=[0,0.07,0.13,0.19,0.24,0.29,0.34,0.38];
+      const pitches=[900,1100,800,1300,700,1050,950,1200];
+      offsets.forEach((dt,i)=>woodThud(t+dt, 0.5+i*0.04, pitches[i], 0.07, m));
+      // Cheerful pair of taps at end
+      [523,784].forEach((f,i)=>ping(t+0.5+i*0.14, f, 0.5, 0.22, m));
     },
 
-    // ── VICTORY — triumphant fanfare ─────────────────────────────
+    // Victory: celebration knocks then melody
     victory(){
-      const m=gain(0.6); const t=ac().currentTime;
-      // Celebration taps
-      [0, 0.06, 0.12].forEach(dt=>{
-        woodNoise(t+dt, 0.04, 0.9, 500, 1800, m);
-      });
-      // Melody
-      const mel=[392,523,659,784,659,784,1047];
-      const tms=[0.20,0.32,0.44,0.56,0.68,0.78,0.90];
-      mel.forEach((f,i)=>ping(t+tms[i], f, 0.3, 0.28, m));
-      // Final chord
-      [784,988,1175].forEach(f=>ping(t+1.08, f, 1.0, 0.18, m));
+      const m=G(0.65), t=ac().currentTime;
+      [0,0.05,0.10,0.16].forEach(dt=>woodThud(t+dt,0.8,1000,0.07,m));
+      const mel=[392,523,659,784,880,1047];
+      mel.forEach((f,i)=>ping(t+0.28+i*0.13,f,0.4,0.22,m));
+      [784,988,1175].forEach(f=>ping(t+1.15,f,1.0,0.15,m));
+    },
+
+    // Low warning knock when timer is almost out
+    lowTime(){
+      const m=G(0.5), t=ac().currentTime;
+      woodThud(t, 0.6, 500, 0.1, m);
     },
   };
 })();
