@@ -256,6 +256,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div class="ctrls">
      <div id="td">Waiting&hellip;</div>
      <button class="rotbtn" id="rotbtn">&#8635; Rotate</button>
+     <button class="rotbtn" id="themebtn">&#127822; Theme</button>
      <button class="actbtn" id="resbtn">&#9873; Resign</button>
     </div>
     <div class="hnav">
@@ -321,6 +322,55 @@ const PIECE_COLORS={
   gold: {fill:'#e8900a', stroke:'#5a2e00', hl:'rgba(255,200,60,0.75)', label:'Amber Gold'}, // Amber Gold
   gray: {fill:'#909090', stroke:'#303030', hl:'rgba(200,200,200,0.5)', label:'Out'},     // Eliminated
 };
+
+// ── Board Themes ─────────────────────────────────────────────────
+const BOARD_THEMES = [
+  {
+    name: 'Glass',
+    light: '#cdd5de',
+    dark:  '#7a8fa0',
+    selFill:   'rgba(100,180,255,.45)',
+    lastFill:  'rgba(140,200,255,.30)',
+    dotFill:   'rgba(120,185,255,.55)',
+    ringStroke:'rgba(80,160,255,.65)',
+    coordLight:'rgba(210,220,230,.8)',
+    coordDark: 'rgba(60,80,100,.75)',
+  },
+  {
+    name: 'Forest',
+    light: '#eef3dc',
+    dark:  '#6a9e4a',
+    selFill:   'rgba(255,240,100,.50)',
+    lastFill:  'rgba(200,230,120,.38)',
+    dotFill:   'rgba(60,120,40,.55)',
+    ringStroke:'rgba(40,100,20,.70)',
+    coordLight:'rgba(238,243,220,.85)',
+    coordDark: 'rgba(50,80,30,.75)',
+  },
+  {
+    name: 'Classic',
+    light: '#f0d9b5',
+    dark:  '#b58863',
+    selFill:   'rgba(255,215,0,.50)',
+    lastFill:  'rgba(205,185,0,.32)',
+    dotFill:   'rgba(0,0,0,.22)',
+    ringStroke:'rgba(200,50,50,.60)',
+    coordLight:'rgba(240,217,181,.8)',
+    coordDark: 'rgba(100,60,15,.8)',
+  },
+  {
+    name: 'Night',
+    light: '#4a5568',
+    dark:  '#1a202c',
+    selFill:   'rgba(100,200,255,.45)',
+    lastFill:  'rgba(80,160,220,.30)',
+    dotFill:   'rgba(100,200,255,.55)',
+    ringStroke:'rgba(80,180,255,.65)',
+    coordLight:'rgba(180,200,220,.8)',
+    coordDark: 'rgba(80,100,120,.75)',
+  },
+];
+let _boardThemeIdx = 0; // default: Glass
 
 // ── Board Setup ───────────────────────────────────────────────────
 // Pieces per player: R=Rook, N=Knight, B=Bishop, K=King, P=Pawn
@@ -700,27 +750,28 @@ function drawPiece(ctx, type, colorKey, cx, cy, sz){
 // ── Board Renderer ────────────────────────────────────────────────
 function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
   const S=80;
+  const TH=BOARD_THEMES[_boardThemeIdx]||BOARD_THEMES[0];
   ctx.clearRect(0,0,640,640);
   for(let dr=0;dr<8;dr++){
     for(let dc=0;dc<8;dc++){
       const[r,c]=d2b(dr,dc,persp);
-      ctx.fillStyle=(dr+dc)%2===0?'#cdd5de':'#7a8fa0';
+      ctx.fillStyle=(dr+dc)%2===0?TH.light:TH.dark;
       ctx.fillRect(dc*S,dr*S,S,S);
       // Last move highlight
       if(lastMv){
         const[fr,fc]=lastMv.from,[tr,tc]=lastMv.to;
-        if((r===fr&&c===fc)||(r===tr&&c===tc)){ctx.fillStyle='rgba(140,200,255,.30)';ctx.fillRect(dc*S,dr*S,S,S);}
+        if((r===fr&&c===fc)||(r===tr&&c===tc)){ctx.fillStyle=TH.lastFill;ctx.fillRect(dc*S,dr*S,S,S);}
       }
-          // Selected
+      // Selected
       if(selSq){
         const[sdr,sdc]=b2d(selSq[0],selSq[1],persp);
-        if(dr===sdr&&dc===sdc){ctx.fillStyle='rgba(100,180,255,.45)';ctx.fillRect(dc*S,dr*S,S,S);}
+        if(dr===sdr&&dc===sdc){ctx.fillStyle=TH.selFill;ctx.fillRect(dc*S,dr*S,S,S);}
       }
       // Legal move dots/rings
       const hasLegal=legals.some(m=>{const[tdr,tdc]=b2d(m.to[0],m.to[1],persp);return dr===tdr&&dc===tdc;});
       if(hasLegal){
-        if(gp(board,r,c)){ctx.strokeStyle='rgba(80,160,255,.65)';ctx.lineWidth=7;ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,36,0,Math.PI*2);ctx.stroke();}
-        else{ctx.fillStyle='rgba(120,185,255,.55)';ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,13,0,Math.PI*2);ctx.fill();}
+        if(gp(board,r,c)){ctx.strokeStyle=TH.ringStroke;ctx.lineWidth=7;ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,36,0,Math.PI*2);ctx.stroke();}
+        else{ctx.fillStyle=TH.dotFill;ctx.beginPath();ctx.arc(dc*S+40,dr*S+40,13,0,Math.PI*2);ctx.fill();}
       }
     }
   }
@@ -729,9 +780,9 @@ function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
   for(let i=0;i<8;i++){
     const lt=i%2===0;
     const[bRow]=d2b(i,0,persp);
-    ctx.fillStyle=lt?'rgba(60,80,100,.75)':'rgba(210,220,230,.8)';ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText(8-bRow,i*S+3,i*S+2);
+    ctx.fillStyle=lt?TH.coordDark:TH.coordLight;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText(8-bRow,i*S+3,i*S+2);
     const[,bCol]=d2b(7,i,persp);
-    ctx.fillStyle=lt?'rgba(210,220,230,.8)':'rgba(60,80,100,.75)';ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
+    ctx.fillStyle=lt?TH.coordLight:TH.coordDark;ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
   }
   // Pieces
   for(let dr=0;dr<8;dr++)for(let dc=0;dc<8;dc++){
@@ -829,6 +880,14 @@ function enterGame(){
     histIdx=-1; selSq=null; legals=[]; paint();
   });
   document.getElementById('micbtn').addEventListener('click',toggleMic);
+  document.getElementById('themebtn').addEventListener('click',()=>{
+    _boardThemeIdx=(_boardThemeIdx+1)%BOARD_THEMES.length;
+    const name=BOARD_THEMES[_boardThemeIdx].name;
+    document.getElementById('themebtn').textContent=
+      ['🍃','🌙','♟','🔵'][_boardThemeIdx]+' '+name;
+    paint();
+    showToast('Board: '+name);
+  });
   initPieces(); // load + tint real SVG pieces from CDN
   setupResign();
   listenGame();listenChats();listenLog();
