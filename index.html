@@ -181,9 +181,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <div class="cc" data-color="gold"  style="--c:#e8900a"><div class="csw"></div><span>Amber Gold</span></div>
     </div>
     <div class="tbox">
-     <div class="tb ta"><span class="tl">&#9876; TEAM A</span><span class="tm">Matte Black + Icy White</span></div>
+     <div class="tb ta"><span class="tl">&#9876; TEAM A</span><span class="tm">Matte Black + Amber Gold</span></div>
      <div class="vsd">VS</div>
-     <div class="tb tb2"><span class="tl">&#9876; TEAM B</span><span class="tm">Crimson Red + Amber Gold</span></div>
+     <div class="tb tb2"><span class="tl">&#9876; TEAM B</span><span class="tm">Icy White + Crimson Red</span></div>
     </div>
     <div class="rsec">
      <input type="text" id="ri" placeholder="Room ID (blank = create new)"/>
@@ -216,13 +216,13 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div class="turnorder">
      <div class="to-title">Turn Order</div>
      <div class="to-row">
-      <div class="to-dot red"></div><span class="to-name">Red</span>
+      <div class="to-dot red"></div><span class="to-name">Black</span>
       <span class="to-sep">&#8594;</span>
-      <div class="to-dot green"></div><span class="to-name">Green</span>
+      <div class="to-dot blue"></div><span class="to-name">White</span>
       <span class="to-sep">&#8594;</span>
-      <div class="to-dot blue"></div><span class="to-name">Blue</span>
+      <div class="to-dot gold"></div><span class="to-name">Amber</span>
       <span class="to-sep">&#8594;</span>
-      <div class="to-dot gold"></div><span class="to-name">Gold</span>
+      <div class="to-dot green"></div><span class="to-name">Crimson</span>
       <span class="to-sep">&#8594;</span><span class="to-name" style="color:#506080">repeat</span>
      </div>
     </div>
@@ -299,11 +299,11 @@ const FB={
 
 // ── Constants ─────────────────────────────────────────────────────
 const COLORS=['red','blue','green','gold'];
-const TEAMS={red:'A',blue:'A',green:'B',gold:'B'};
+const TEAMS={red:'A',gold:'A',blue:'B',green:'B'};
 
 // Turn order alternates teams: Red(A) → Green(B) → Blue(A) → Gold(B) → repeat
 // Index into this array gives turn order, skipping eliminated players
-const TURN_ORDER=['red','green','blue','gold'];
+const TURN_ORDER=['red','blue','gold','green'];
 
 const PAWN_DIR  ={red:-1,blue:-1,green:1,gold:1};
 const PAWN_PROMO={red:0,  blue:0, green:7,gold:7};
@@ -1605,13 +1605,33 @@ const SFX=(()=>{
 
 // ════════════════════════════════════════════════════════════════
 // VOICE CHAT — WebRTC audio between allies only
-// Signaling via Firebase. Robust with full try/catch everywhere.
+// Key fixes:
+//  1. ICE candidates queued until remote description is set
+//  2. Old Firebase RTC data cleared on init (prevents stale signals)
+//  3. Strict signaling-state guards to prevent double-processing
+//  4. Mic requested on first button click if not yet granted
 // ════════════════════════════════════════════════════════════════
 let _localStream=null, _peerConn=null, _vcAlly=null, _micOn=false, _vcPair=null;
-const STUN={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
-const _addedIce=new Set(); // deduplicate ICE candidates
+let _remoteDescSet=false;   // true once setRemoteDescription has succeeded
+let _icePendingQueue=[];    // ICE candidates buffered before remote desc is set
+let _addedIceKeys=new Set();// Firebase push-key dedup
+
+const STUN_CFG={iceServers:[
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun2.l.google.com:19302'},
+  {urls:'stun:stun3.l.google.com:19302'},
+]};
 
 function vcPairKey(a,b){return[a,b].sort().join('_');}
+
+// Drain pending ICE queue after remote desc is applied
+async function _drainIce(){
+  _remoteDescSet=true;
+  for(const c of _icePendingQueue){
+    try{await _peerConn.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+  }
+  _icePendingQueue=[];
+}
 
 async function initVoiceChat(){
   try{
@@ -1619,137 +1639,177 @@ async function initVoiceChat(){
     if(!_vcAlly){updVCUI();return;}
     _vcPair=vcPairKey(myColor,_vcAlly);
 
-    // Request mic — silently fail if denied or not available
-    if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    // Clear stale RTC signals from Firebase so fresh handshake starts clean
+    if(roomId){
+      try{ await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}`),null); }catch(e){}
+    }
+    // Reset state
+    _remoteDescSet=false; _icePendingQueue=[]; _addedIceKeys=new Set();
+
+    // Request mic (silently skip if denied — user can click mic button later)
+    if(navigator.mediaDevices?.getUserMedia){
       try{
-        _localStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+        _localStream=await navigator.mediaDevices.getUserMedia({
+          audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},
+          video:false
+        });
         _localStream.getTracks().forEach(t=>{t.enabled=false;}); // start muted
-      }catch(e){console.warn('Mic access denied or unavailable:',e.name);}
+      }catch(e){
+        console.warn('Mic unavailable:',e.name,'(user can click 🎤 to retry)');
+        _localStream=null;
+      }
     }
 
-    await vcSetupPeer();
-    listenVCSignal();
+    _vcSetupPeer();
+    _listenVCSignal();
 
-    // Deterministic offerer: alphabetically first color in pair
-    if(myColor===_vcPair.split('_')[0]) setTimeout(vcOffer,1500);
+    // Offerer = alphabetically first in pair key (deterministic, same result on both sides)
+    const isOfferer=myColor===_vcPair.split('_')[0];
+    if(isOfferer) setTimeout(_vcOffer, 1800); // slight delay so answerer is listening
     updVCUI();
-  }catch(e){console.warn('Voice chat init failed:',e);}
+  }catch(e){console.warn('Voice chat init error:',e);}
 }
 
-async function vcSetupPeer(){
-  try{
-    if(_peerConn){try{_peerConn.close();}catch(e){}}
-    _peerConn=new RTCPeerConnection(STUN);
-    if(_localStream) _localStream.getTracks().forEach(t=>_peerConn.addTrack(t,_localStream));
+function _vcSetupPeer(){
+  if(_peerConn){try{_peerConn.close();}catch(e){}}
+  _peerConn=new RTCPeerConnection(STUN_CFG);
 
-    _peerConn.ontrack=e=>{
-      try{
-        let audio=document.getElementById('vc-audio');
-        if(!audio){audio=document.createElement('audio');audio.id='vc-audio';audio.autoplay=true;document.body.appendChild(audio);}
-        audio.srcObject=e.streams[0];
-        updVCUI(true);
-      }catch(e2){}
-    };
+  // Add local tracks if mic is available
+  if(_localStream) _localStream.getTracks().forEach(t=>_peerConn.addTrack(t,_localStream));
 
-    _peerConn.onicecandidate=async e=>{
-      try{
-        if(e.candidate&&_vcPair&&roomId)
-          await push(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/ice_${myColor}`),e.candidate.toJSON());
-      }catch(e2){}
-    };
+  // Receive remote audio stream
+  _peerConn.ontrack=e=>{
+    try{
+      let a=document.getElementById('vc-audio');
+      if(!a){a=document.createElement('audio');a.id='vc-audio';a.autoplay=true;document.body.appendChild(a);}
+      a.srcObject=e.streams[0];
+      updVCUI(true);
+    }catch(e2){}
+  };
 
-    _peerConn.onconnectionstatechange=()=>{
-      const s=_peerConn.connectionState;
-      updVCUI(s==='connected');
-      if(s==='failed'||s==='disconnected') setTimeout(()=>initVoiceChat(),3000);
-    };
-  }catch(e){console.warn('vcSetupPeer error:',e);}
+  // Send ICE candidates to Firebase
+  _peerConn.onicecandidate=async e=>{
+    if(!e.candidate||!_vcPair||!roomId)return;
+    try{await push(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/ice_${myColor}`),e.candidate.toJSON());}catch(e2){}
+  };
+
+  _peerConn.onconnectionstatechange=()=>{
+    const s=_peerConn?.connectionState;
+    updVCUI(s==='connected');
+    if(s==='failed'){
+      console.warn('WebRTC connection failed — retrying in 4s');
+      setTimeout(initVoiceChat,4000);
+    }
+  };
 }
 
-async function vcOffer(){
+async function _vcOffer(){
   if(!_peerConn||!_vcPair||!roomId)return;
+  if(_peerConn.signalingState!=='stable'){return;} // already in progress
   try{
-    const offer=await _peerConn.createOffer();
+    const offer=await _peerConn.createOffer({offerToReceiveAudio:true});
     await _peerConn.setLocalDescription(offer);
-    await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/offer`),{type:offer.type,sdp:offer.sdp,ts:Date.now()});
+    await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/offer`),
+      {type:offer.type,sdp:offer.sdp,ts:Date.now()});
   }catch(e){console.warn('VC offer error:',e);}
 }
 
-function listenVCSignal(){
+function _listenVCSignal(){
   if(!_vcPair||!roomId)return;
   const isOfferer=myColor===_vcPair.split('_')[0];
 
   if(!isOfferer){
-    // Answerer: listen for offer
+    // Answerer: wait for offer, then reply with answer
     onValue(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/offer`),async snap=>{
       if(!snap.exists()||!_peerConn)return;
+      if(_peerConn.signalingState!=='stable')return; // guard against double-process
       try{
-        if(_peerConn.signalingState==='stable'||_peerConn.signalingState==='have-remote-offer'){
-          await _peerConn.setRemoteDescription(new RTCSessionDescription(snap.val()));
-          const ans=await _peerConn.createAnswer();
-          await _peerConn.setLocalDescription(ans);
-          await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/answer`),{type:ans.type,sdp:ans.sdp,ts:Date.now()});
-        }
+        await _peerConn.setRemoteDescription(new RTCSessionDescription(snap.val()));
+        await _drainIce();
+        const ans=await _peerConn.createAnswer();
+        await _peerConn.setLocalDescription(ans);
+        await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/answer`),
+          {type:ans.type,sdp:ans.sdp,ts:Date.now()});
       }catch(e){console.warn('VC answer error:',e);}
     });
-  }else{
-    // Offerer: listen for answer
+  } else {
+    // Offerer: wait for answer
     onValue(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/answer`),async snap=>{
       if(!snap.exists()||!_peerConn)return;
+      if(_peerConn.signalingState!=='have-local-offer')return;
       try{
-        if(_peerConn.signalingState==='have-local-offer')
-          await _peerConn.setRemoteDescription(new RTCSessionDescription(snap.val()));
-      }catch(e){console.warn('VC setRemote error:',e);}
+        await _peerConn.setRemoteDescription(new RTCSessionDescription(snap.val()));
+        await _drainIce();
+      }catch(e){console.warn('VC set-answer error:',e);}
     });
   }
 
-  // Both sides: receive remote ICE candidates
+  // Both sides: receive and apply remote ICE candidates
   onValue(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/ice_${_vcAlly}`),snap=>{
     if(!snap.exists()||!_peerConn)return;
     Object.entries(snap.val()).forEach(async([k,c])=>{
-      if(_addedIce.has(k))return;
-      _addedIce.add(k);
-      try{await _peerConn.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+      if(_addedIceKeys.has(k))return;
+      _addedIceKeys.add(k);
+      if(_remoteDescSet){
+        try{await _peerConn.addIceCandidate(new RTCIceCandidate(c));}catch(e){}
+      } else {
+        _icePendingQueue.push(c); // buffer until remote desc is ready
+      }
     });
   });
 }
 
 function toggleMic(){
+  // If mic not yet acquired, request it now
   if(!_localStream){
-    // Try to get mic if not available yet
-    navigator.mediaDevices&&navigator.mediaDevices.getUserMedia({audio:true,video:false})
-      .then(s=>{_localStream=s;_localStream.getTracks().forEach(t=>{t.enabled=true;});_micOn=true;
-                if(_peerConn) s.getTracks().forEach(t=>_peerConn.addTrack(t,s));
-                updVCUI(); SFX.move();})
-      .catch(()=>showToast('Microphone access denied by browser'));
+    if(!navigator.mediaDevices?.getUserMedia){
+      showToast('Voice chat needs HTTPS — works on GitHub Pages');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({audio:true,video:false})
+      .then(s=>{
+        _localStream=s;
+        _micOn=true;
+        _localStream.getTracks().forEach(t=>{t.enabled=true;});
+        // Add tracks to existing peer connection if already set up
+        if(_peerConn&&_peerConn.signalingState!=='closed')
+          s.getTracks().forEach(t=>_peerConn.addTrack(t,s));
+        updVCUI();
+        SFX.move();
+        showToast('Microphone on!');
+      })
+      .catch(err=>{
+        const msg=err.name==='NotAllowedError'?'Mic access denied — allow it in browser settings'
+                 :err.name==='NotFoundError'?'No microphone found'
+                 :'Mic error: '+err.message;
+        showToast(msg);
+      });
     return;
   }
   _micOn=!_micOn;
   _localStream.getTracks().forEach(t=>{t.enabled=_micOn;});
   updVCUI();
-  if(_micOn)SFX.move(); else SFX.castle();
+  if(_micOn){SFX.move();showToast('Mic on 🎙');}
+  else{SFX.castle();showToast('Mic muted 🔇');}
 }
 
 function updVCUI(connected){
   const btn=document.getElementById('micbtn');
   const peerEl=document.getElementById('vcp');
   if(!btn)return;
-
-  if(!_localStream||!_vcAlly){
-    btn.textContent='🎤';btn.className='micbtn muted';
-    btn.title='Click to request microphone access';
-  } else if(_micOn){
+  if(_micOn){
     btn.textContent='🎙️';btn.className='micbtn speaking';
-    btn.title='Microphone ON — click to mute';
+    btn.title='Mic ON — click to mute';
   } else {
     btn.textContent='🎤';btn.className='micbtn muted';
-    btn.title='Microphone muted — click to unmute';
+    btn.title=_localStream?'Mic muted — click to unmute':'Click to enable microphone';
   }
-
   if(peerEl&&_vcAlly&&GS){
-    const pName=GS.players?.[_vcAlly]?.name||(PIECE_COLORS[_vcAlly]?.label||_vcAlly);
-    const dot=connected?'<span class="vcpeer-dot live"></span>':'<span class="vcpeer-dot"></span>';
-    peerEl.innerHTML=dot+`<span style="color:#7080a0;font-size:9px">${esc(pName)}</span>`;
+    const nm=GS.players?.[_vcAlly]?.name||(PIECE_COLORS[_vcAlly]?.label||_vcAlly);
+    peerEl.innerHTML=(connected
+      ?'<span class="vcpeer-dot live"></span>'
+      :'<span class="vcpeer-dot"></span>')
+      +`<span style="color:#7080a0;font-size:9px">${esc(nm)}</span>`;
   }
 }
 
