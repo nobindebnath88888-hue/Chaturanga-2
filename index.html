@@ -1657,10 +1657,13 @@ async function initVoiceChat(){
     if(!_vcAlly){updVCUI();return;}
     _vcPair=vcPairKey(myColor,_vcAlly);
 
-    // FIX 1: Only wipe YOUR OWN ICE candidates — never touch the offer/answer
-    // This prevents the race where Player B wipes Player A's offer on join
+    // Clear own ICE candidates. Offerer also resets offer; answerer resets answer.
+    // This avoids stale data from previous sessions confusing the new handshake.
     if(roomId){
+      const isOff=myColor===vcPairKey(myColor,COLORS.find(c=>TEAMS[c]===TEAMS[myColor]&&c!==myColor)).split('_')[0];
       try{await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/ice_${myColor}`),null);}catch(e){}
+      if(isOff){try{await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/offer`),null);}catch(e){}}
+      else{try{await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/answer`),null);}catch(e){}}
     }
 
     // FIX 2: Unsubscribe old Firebase listeners before making new ones
@@ -1699,9 +1702,15 @@ function _vcSetupPeer(){
 
   if(_localStream) _localStream.getTracks().forEach(t=>_peerConn.addTrack(t,_localStream));
 
-  // FIX 3: renegotiate automatically if tracks added late (e.g. mic granted after connect)
+  // Renegotiate only when ALREADY connected — never during initial handshake.
+  // During setup the explicit setTimeout(_vcOffer,1800) handles the first offer.
+  // This prevents the race where BOTH sides call _vcOffer simultaneously.
   _peerConn.onnegotiationneeded=async()=>{
-    if(_peerConn.signalingState==='stable') await _vcOffer();
+    const s=_peerConn?.connectionState;
+    if(s==='connected'||s==='completed'){
+      // Only the designated offerer renegotiates
+      if(myColor===_vcPair.split('_')[0]) await _vcOffer();
+    }
   };
 
   // FIX 4: Play received audio via Web Audio (already unlocked) instead of autoplay
@@ -1747,6 +1756,8 @@ async function _vcOffer(){
   if(!_peerConn||!_vcPair||!roomId)return;
   if(_peerConn.signalingState!=='stable')return;
   try{
+    // Clear stale answer so onValue doesn't fire with old data when new offer is set
+    await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/answer`),null);
     const offer=await _peerConn.createOffer({offerToReceiveAudio:true});
     await _peerConn.setLocalDescription(offer);
     await set(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/offer`),
@@ -1762,7 +1773,7 @@ function _listenVCSignal(){
     // Answerer: listen for offer
     _vcUnsubOffer=onValue(ref(db2,`rooms/${roomId}/rtc/${_vcPair}/offer`),async snap=>{
       if(!snap.exists()||!_peerConn)return;
-      if(_peerConn.signalingState!=='stable')return;
+      if(_peerConn.signalingState!=='stable'&&_peerConn.signalingState!=='have-remote-offer')return;
       try{
         await _peerConn.setRemoteDescription(new RTCSessionDescription(snap.val()));
         await _drainIce();
