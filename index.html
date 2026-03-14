@@ -1484,47 +1484,85 @@ function showWin(team){
 
 
 // ════════════════════════════════════════════════════════════════
-// SOUND ENGINE — hyper-realistic wooden chess board sounds
-// Technique: filtered white noise + body resonance + click transient
-// Models: pick-up click, air-thump, wood-on-wood, hollow-body ring
+// SOUND ENGINE — Lichess wooden sounds + synthesised fallback
+// Loads real .mp3 files from lichess1.org CDN (same as piece SVGs).
+// Falls back to Web Audio synthesis if CDN is unreachable.
 // ════════════════════════════════════════════════════════════════
-const SFX=(()=>{
-  let C=null;
-  const ac=()=>{ if(!C)C=new(window.AudioContext||window.webkitAudioContext)(); if(C.state==='suspended')C.resume(); return C; };
-  const G=(v)=>{ const g=ac().createGain(); g.gain.value=v; g.connect(ac().destination); return g; };
+const SFX = (()=>{
+  // ── Web Audio context (lazy, unlocks on first user gesture) ──
+  let C = null;
+  const ac = () => {
+    if(!C) C = new (window.AudioContext||window.webkitAudioContext)();
+    if(C.state === 'suspended') C.resume();
+    return C;
+  };
 
-  // === CORE: realistic wooden thud ===
-  // attack  = short high-freq click (fingernail/edge impact)
-  // body    = bandpass noise in 300-900Hz (hollow wood resonance)
-  // thump   = low-freq sine (mass hitting board)
+  // ── Lichess CDN sound files ───────────────────────────────────
+  const SND_CDN = 'https://lichess1.org/assets/sound/standard/';
+  const _buf = {}; // decoded AudioBuffer cache keyed by name
+
+  async function loadSound(name){
+    if(_buf[name]) return;
+    try{
+      const res = await fetch(SND_CDN + name + '.mp3');
+      if(!res.ok) return;
+      const arr = await res.arrayBuffer();
+      _buf[name] = await ac().decodeAudioData(arr);
+    }catch(e){ /* CDN unreachable — fallback to synthesis */ }
+  }
+
+  // Preload the sounds we need from Lichess
+  function preload(){
+    ['Move','Capture','Castle','GenericNotify','Victory'].forEach(loadSound);
+  }
+  // Start loading immediately (runs in background)
+  setTimeout(preload, 100);
+
+  // Play a decoded buffer through Web Audio at given volume
+  function playBuf(name, vol=1.0){
+    const buf = _buf[name];
+    if(!buf) return false; // not loaded yet — signal fallback needed
+    const src = ac().createBufferSource();
+    const g   = ac().createGain();
+    g.gain.value = vol;
+    src.buffer = buf;
+    src.connect(g); g.connect(ac().destination);
+    src.start(0);
+    return true;
+  }
+
+  // ── Synthesised fallback (woodThud engine) ────────────────────
+  const G = (v) => { const g=ac().createGain(); g.gain.value=v; g.connect(ac().destination); return g; };
+
   function woodThud(t, vol, pitch, dur, dest){
     const sr=ac().sampleRate;
-    // --- attack click: very short broadband burst ---
     const cBuf=ac().createBuffer(1,Math.ceil(sr*0.008),sr);
     const cD=cBuf.getChannelData(0);
     for(let i=0;i<cD.length;i++) cD[i]=(Math.random()*2-1)*Math.exp(-i/(sr*0.002));
     const cSrc=ac().createBufferSource(); cSrc.buffer=cBuf;
-    const cGain=ac().createGain(); cGain.gain.setValueAtTime(vol*2.5,t); cGain.gain.exponentialRampToValueAtTime(0.0001,t+0.015);
+    const cGain=ac().createGain();
+    cGain.gain.setValueAtTime(vol*2.5,t);
+    cGain.gain.exponentialRampToValueAtTime(0.0001,t+0.015);
     cSrc.connect(cGain); cGain.connect(dest); cSrc.start(t);
-
-    // --- body resonance: bandpass noise, 2 layers ---
     for(const [lo,hi,q,g2] of [[pitch*0.6,pitch*1.4,2.5,vol],[pitch*1.8,pitch*3,1.8,vol*0.4]]){
       const bLen=Math.ceil(sr*dur);
       const buf=ac().createBuffer(1,bLen,sr);
       const d=buf.getChannelData(0);
-      // pre-bake decay envelope into noise
       for(let i=0;i<bLen;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(sr*dur*0.55));
       const src=ac().createBufferSource(); src.buffer=buf;
       const bp=ac().createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=(lo+hi)/2; bp.Q.value=q;
       const lp=ac().createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=hi;
-      const gn=ac().createGain(); gn.gain.setValueAtTime(g2,t+0.003); gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      const gn=ac().createGain();
+      gn.gain.setValueAtTime(g2,t+0.003);
+      gn.gain.exponentialRampToValueAtTime(0.0001,t+dur);
       src.connect(bp); bp.connect(lp); lp.connect(gn); gn.connect(dest); src.start(t+0.002);
     }
-
-    // --- thump: short decaying sine (board bounce) ---
     const osc=ac().createOscillator(); const og=ac().createGain();
-    osc.type='sine'; osc.frequency.setValueAtTime(pitch*0.35,t); osc.frequency.exponentialRampToValueAtTime(pitch*0.18,t+dur*0.5);
-    og.gain.setValueAtTime(vol*0.45,t+0.003); og.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.7);
+    osc.type='sine';
+    osc.frequency.setValueAtTime(pitch*0.35,t);
+    osc.frequency.exponentialRampToValueAtTime(pitch*0.18,t+dur*0.5);
+    og.gain.setValueAtTime(vol*0.45,t+0.003);
+    og.gain.exponentialRampToValueAtTime(0.0001,t+dur*0.7);
     osc.connect(og); og.connect(dest); osc.start(t); osc.stop(t+dur+0.05);
   }
 
@@ -1536,61 +1574,68 @@ const SFX=(()=>{
   }
 
   return {
-    // Quiet piece lift + solid landing — like sliding a rook on a wooden board
+    // ── Move: real Lichess wood sound, fallback to synthesis ──────
     move(){
+      if(playBuf('Move', 0.85)) return;
       const m=G(0.8), t=ac().currentTime;
-      // tiny pick-up tap
-      woodThud(t,      0.25, 1400, 0.04, m);
-      // landing thud — the main "clonk"
-      woodThud(t+0.06, 1.0,  720,  0.18, m);
+      woodThud(t, 0.25, 1400, 0.04, m);
+      woodThud(t+0.06, 1.0, 720, 0.18, m);
     },
 
-    // Heavier — capturing piece has more weight, displaced piece rattles
+    // ── Capture: real Lichess capture, fallback synthesis ─────────
     capture(){
+      if(playBuf('Capture', 0.9)) return;
       const m=G(0.9), t=ac().currentTime;
-      woodThud(t,      1.3,  600,  0.22, m); // heavy landing
-      woodThud(t+0.06, 0.5,  1100, 0.08, m); // captured piece bouncing off
-      woodThud(t+0.12, 0.3,  850,  0.06, m); // settling
+      woodThud(t, 1.3, 600, 0.22, m);
+      woodThud(t+0.06, 0.5, 1100, 0.08, m);
+      woodThud(t+0.12, 0.3, 850, 0.06, m);
     },
 
-    // Castle: king slid + rook placed separately
+    // ── Castle: real sound (Lichess uses same Move for castling) ──
     castle(){
+      // Play Move twice with a gap — king then rook
+      if(_buf['Move']){
+        playBuf('Move', 0.75);
+        setTimeout(()=>playBuf('Move', 0.65), 180);
+        return;
+      }
       const m=G(0.75), t=ac().currentTime;
-      woodThud(t,      0.6,  800,  0.14, m); // king lands
-      woodThud(t+0.22, 0.8,  650,  0.14, m); // rook lands
+      woodThud(t, 0.6, 800, 0.14, m);
+      woodThud(t+0.22, 0.8, 650, 0.14, m);
     },
 
-    // Gentle 2-note wooden xylophone tap — your turn notification
+    // ── Your turn: Lichess GenericNotify chime ────────────────────
     yourTurn(){
+      if(playBuf('GenericNotify', 0.5)) return;
       const m=G(0.4), t=ac().currentTime;
-      woodThud(t,      0.3, 1800, 0.06, m);
+      woodThud(t, 0.3, 1800, 0.06, m);
       woodThud(t+0.15, 0.3, 2200, 0.06, m);
       ping(t+0.02, 880, 0.35, 0.2, m);
       ping(t+0.17, 1175, 0.4, 0.15, m);
     },
 
-    // Pieces knocked over and scattered — multiple irregular thumps
+    // ── Eliminate: dramatic multi-thud (no Lichess equivalent) ───
     eliminate(){
       const m=G(0.85), t=ac().currentTime;
-      woodThud(t,      1.2,  450,  0.35, m);
-      woodThud(t+0.08, 0.7,  700,  0.18, m);
-      woodThud(t+0.18, 0.5,  900,  0.12, m);
+      woodThud(t, 1.2, 450, 0.35, m);
+      woodThud(t+0.08, 0.7, 700, 0.18, m);
+      woodThud(t+0.18, 0.5, 900, 0.12, m);
       woodThud(t+0.28, 0.35, 1100, 0.08, m);
-      woodThud(t+0.36, 0.25, 800,  0.06, m);
+      woodThud(t+0.36, 0.25, 800, 0.06, m);
     },
 
-    // Setting up the board: rapid series of pieces being placed
+    // ── Join: board setup taps (no Lichess equivalent) ───────────
     join(){
       const m=G(0.55), t=ac().currentTime;
       const offsets=[0,0.07,0.13,0.19,0.24,0.29,0.34,0.38];
       const pitches=[900,1100,800,1300,700,1050,950,1200];
       offsets.forEach((dt,i)=>woodThud(t+dt, 0.5+i*0.04, pitches[i], 0.07, m));
-      // Cheerful pair of taps at end
       [523,784].forEach((f,i)=>ping(t+0.5+i*0.14, f, 0.5, 0.22, m));
     },
 
-    // Victory: celebration knocks then melody
+    // ── Victory: real Lichess victory sound ───────────────────────
     victory(){
+      if(playBuf('Victory', 0.7)) return;
       const m=G(0.65), t=ac().currentTime;
       [0,0.05,0.10,0.16].forEach(dt=>woodThud(t+dt,0.8,1000,0.07,m));
       const mel=[392,523,659,784,880,1047];
@@ -1598,14 +1643,15 @@ const SFX=(()=>{
       [784,988,1175].forEach(f=>ping(t+1.15,f,1.0,0.15,m));
     },
 
-    // Low warning knock when timer is almost out
     lowTime(){
       const m=G(0.5), t=ac().currentTime;
       woodThud(t, 0.6, 500, 0.1, m);
     },
+
+    // Reload sounds after user gesture unlocks AudioContext
+    preload(){ preload(); },
   };
 })();
-
 
 // ════════════════════════════════════════════════════════════════
 // VOICE CHAT — WebRTC audio between allies only
