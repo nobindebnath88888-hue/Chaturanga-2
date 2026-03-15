@@ -160,6 +160,75 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .corner-name-cell.gold-p  {background:rgba(100,50,0,.92);color:#ffd070;border:1px solid #c07000}
 .corner-name-cell.active  {box-shadow:0 0 0 2px #ffe680;animation:pu .8s ease infinite}
 .corner-name-cell.elim    {opacity:.38;text-decoration:line-through}
+
+/* ── Voice typing button ─────────────────────────────────── */
+.vtbtn{width:30px;min-width:30px;height:30px;border-radius:50%;border:1px solid rgba(180,140,50,.3);
+  background:rgba(180,140,50,.08);color:#d4a017;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.vtbtn:hover{background:rgba(180,140,50,.22)}
+.vtbtn.listening{border-color:#e74c3c;background:rgba(192,57,43,.25);color:#ff6060;animation:pu .5s ease infinite}
+
+/* ── Mobile layout (≤640px) ─────────────────────────────── */
+@media(max-width:640px){
+  html,body{overflow:hidden;height:100%;height:100dvh}
+  /* Hide side panels on mobile */
+  .gl{display:flex!important;flex-direction:column!important;height:100dvh;overflow:hidden}
+  .sp{display:none!important}
+  /* Board column takes all space */
+  .cc2{flex:1;padding:4px 6px;overflow:hidden;display:flex;flex-direction:column;
+       align-items:center;justify-content:flex-start;gap:2px;min-height:0}
+  /* Board as large as possible */
+  .board-outer{width:100%}
+  .board-corner-row{height:18px}
+  .corner-name-cell{font-size:8px;padding:1px 5px;min-width:48px}
+  #gc{width:100%!important;height:auto!important;aspect-ratio:1}
+  /* Compact controls */
+  .ctrls{margin-top:2px;gap:5px}
+  #td{font-size:10px;padding:3px 10px}
+  .rotbtn{font-size:9px;padding:3px 7px}
+  .actbtn{font-size:9px;padding:3px 7px}
+  .hnav{margin-top:2px;gap:3px}
+  .hnbtn{font-size:9px;padding:3px 7px}
+  .bi{font-size:9px;padding:2px 8px}
+  /* Mobile drawer — slides up from bottom */
+  #mob-drawer{
+    position:fixed;bottom:0;left:0;right:0;
+    background:rgba(6,12,26,.98);
+    border-top:1px solid rgba(180,140,50,.22);
+    border-radius:14px 14px 0 0;
+    z-index:300;
+    transform:translateY(calc(100% - 44px));
+    transition:transform .3s ease;
+    max-height:70dvh;
+    display:flex;flex-direction:column;
+  }
+  #mob-drawer.open{transform:translateY(0)}
+  .mob-tabs{display:flex;gap:0;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.12)}
+  .mob-tab{flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;
+    padding:10px 6px 8px;text-align:center;color:#506080;cursor:pointer;
+    border:none;background:none;transition:color .15s}
+  .mob-tab.active{color:#d4a017;border-bottom:2px solid #d4a017}
+  .mob-handle{text-align:center;padding:6px;color:#506080;font-size:16px;cursor:pointer;
+    flex-shrink:0;line-height:1}
+  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0}
+  .mob-panel.active{display:flex}
+  /* Floating open button for mobile */
+  #mob-openbtn{
+    position:fixed;bottom:50px;right:12px;
+    width:42px;height:42px;border-radius:50%;
+    background:rgba(180,140,50,.18);border:1px solid rgba(180,140,50,.4);
+    color:#d4a017;font-size:18px;cursor:pointer;z-index:299;
+    display:none;align-items:center;justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,.5)
+  }
+}
+@media(min-width:641px){
+  #mob-drawer{display:none!important}
+  #mob-openbtn{display:none!important}
+}
+@media(max-width:640px){
+  #mob-openbtn{display:flex}
+}
 </style>
 </head>
 <body>
@@ -198,14 +267,11 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   <div class="gl">
    <div class="sp">
     <div class="ph"><span>&#128737;</span><span>TEAM CHAT</span><span id="tld" class="tbadge">&#8212;</span></div>
-    <div class="vcrow">
-      <button class="micbtn muted" id="micbtn" title="Toggle microphone">🎤</button>
-      <span class="vclabel">Voice Chat (allies only)</span>
-      <span class="vcpeer" id="vcp"></span>
-    </div>
+
     <div id="tcm" class="cm"></div>
     <div class="cir">
      <input type="text" id="tci" placeholder="Message ally&hellip;" maxlength="200"/>
+     <button class="vtbtn" id="tvt" title="Voice type">🎤</button>
      <button id="tsb" class="sb">&#10148;</button>
     </div>
     <div class="pls">
@@ -272,6 +338,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div id="pcm" class="cm"></div>
     <div class="cir">
      <input type="text" id="pci" placeholder="Global message&hellip;" maxlength="200"/>
+     <button class="vtbtn" id="pvt" title="Voice type">🎤</button>
      <button id="psb" class="sb">&#10148;</button>
     </div>
     <div class="gls">
@@ -281,6 +348,40 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
    </div>
   </div>
  </div>
+
+<!-- Mobile drawer: chat + players, slides up from bottom -->
+<div id="mob-drawer">
+  <div class="mob-handle" id="mob-handle">⏶</div>
+  <div class="mob-tabs">
+    <button class="mob-tab active" data-tab="tchat">&#128737; Team</button>
+    <button class="mob-tab" data-tab="pchat">&#128226; Public</button>
+    <button class="mob-tab" data-tab="players">&#9812; Players</button>
+  </div>
+  <!-- Team chat panel -->
+  <div class="mob-panel active" id="mob-tchat">
+    <div id="mob-tcm" class="cm"></div>
+    <div class="cir">
+      <input type="text" id="mob-tci" placeholder="Message ally…" maxlength="200"/>
+      <button class="vtbtn" id="mob-tvt" title="Voice type">🎤</button>
+      <button id="mob-tsb" class="sb">&#10148;</button>
+    </div>
+  </div>
+  <!-- Public chat panel -->
+  <div class="mob-panel" id="mob-pchat">
+    <div id="mob-pcm" class="cm"></div>
+    <div class="cir">
+      <input type="text" id="mob-pci" placeholder="Global message…" maxlength="200"/>
+      <button class="vtbtn" id="mob-pvt" title="Voice type">🎤</button>
+      <button id="mob-psb" class="sb">&#10148;</button>
+    </div>
+  </div>
+  <!-- Players panel -->
+  <div class="mob-panel" id="mob-players" style="padding:8px">
+    <div id="mob-pl"></div>
+  </div>
+</div>
+<button id="mob-openbtn" title="Chat &amp; Players">💬</button>
+
 </div>
 
 <script type="module">
@@ -785,6 +886,38 @@ function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
     const[,bCol]=d2b(7,i,persp);
     ctx.fillStyle=lt?TH.coordLight:TH.coordDark;ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
   }
+  // Check glow — red pulse behind any king currently in check
+  // Just visual, no gameplay effect
+  if(histIdx<0){  // only in live view
+    const savedElim=_elimSet;
+    _elimSet=elimSet||new Set();
+    COLORS.forEach(color=>{
+      if(elimSet&&elimSet.has(color))return; // eliminated kings don't show check
+      if(!isInCheck(board,color))return;
+      // Find king position
+      for(let i=0;i<64;i++){
+        const p=board[i];
+        if(p&&p.type==='K'&&p.color===color){
+          const kr=Math.floor(i/8),kc=i%8;
+          const[dr2,dc2]=b2d(kr,kc,persp);
+          // Radial red glow filling the square
+          const cx2=dc2*S+S/2, cy2=dr2*S+S/2;
+          const grad=ctx.createRadialGradient(cx2,cy2,4,cx2,cy2,S*0.62);
+          grad.addColorStop(0,'rgba(255,40,40,0.62)');
+          grad.addColorStop(0.55,'rgba(220,20,20,0.28)');
+          grad.addColorStop(1,'rgba(180,0,0,0)');
+          ctx.fillStyle=grad;
+          ctx.fillRect(dc2*S,dr2*S,S,S);
+          // Bright red border around the square
+          ctx.strokeStyle='rgba(255,60,60,0.85)';
+          ctx.lineWidth=3;
+          ctx.strokeRect(dc2*S+1.5,dr2*S+1.5,S-3,S-3);
+          break;
+        }
+      }
+    });
+    _elimSet=savedElim;
+  }
   // Pieces
   for(let dr=0;dr<8;dr++)for(let dc=0;dc<8;dc++){
     const[r,c]=d2b(dr,dc,persp);const p=gp(board,r,c);
@@ -880,7 +1013,7 @@ function enterGame(){
   document.getElementById('hlive').addEventListener('click',()=>{
     histIdx=-1; selSq=null; legals=[]; paint();
   });
-  document.getElementById('micbtn').addEventListener('click',toggleMic);
+
   document.getElementById('themebtn').addEventListener('click',()=>{
     _boardThemeIdx=(_boardThemeIdx+1)%BOARD_THEMES.length;
     const name=BOARD_THEMES[_boardThemeIdx].name;
@@ -893,12 +1026,22 @@ function enterGame(){
   setupResign();
   listenGame();listenChats();listenLog();
   SFX.join();
-  initVoiceChat();
+  setupVoiceTyping();
+  setupMobileDrawer();
 }
 
 function fitCanvas(c){
-  const sz=Math.max(280,Math.min(620,window.innerWidth-540,window.innerHeight-85));
-  c.style.width=sz+'px';c.style.height=sz+'px';
+  const isMob=window.innerWidth<=640;
+  let sz;
+  if(isMob){
+    // Mobile: fill full screen width minus tiny margin, leave room for controls
+    sz=Math.min(window.innerWidth-12, window.innerHeight-130);
+    sz=Math.max(sz,240);
+    c.style.width='100%'; c.style.height='auto';
+  } else {
+    sz=Math.max(280,Math.min(620,window.innerWidth-540,window.innerHeight-85));
+    c.style.width=sz+'px'; c.style.height=sz+'px';
+  }
 }
 
 function paint(){
@@ -1230,8 +1373,14 @@ async function forceEliminate(color){
 
 function listenChats(){
   const tk=TEAMS[myColor]==='A'?'teamA':'teamB';
-  onValue(ref(db2,`rooms/${roomId}/chats/${tk}`),s=>renderChat('tcm',s.exists()?s.val():null));
-  onValue(ref(db2,`rooms/${roomId}/chats/public`),s=>renderChat('pcm',s.exists()?s.val():null));
+  onValue(ref(db2,`rooms/${roomId}/chats/${tk}`),s=>{
+    const v=s.exists()?s.val():null;
+    renderChat('tcm',v); renderChatMobile('mob-tcm',v);
+  });
+  onValue(ref(db2,`rooms/${roomId}/chats/public`),s=>{
+    const v=s.exists()?s.val():null;
+    renderChat('pcm',v); renderChatMobile('mob-pcm',v);
+  });
 }
 
 function listenLog(){
@@ -1473,6 +1622,7 @@ function updPlayers(){
     }
   });
   updTimers();
+  updPlayersMobile();
 }
 
 function showWin(team){
@@ -1931,6 +2081,139 @@ function updVCUI(connected){
       :'<span class="vcpeer-dot"></span>')
       +`<span style="color:#7080a0;font-size:9px">${esc(nm)}</span>`;
   }
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// VOICE TYPING — Speech-to-text for chat inputs
+// Uses Web Speech API (works on mobile Chrome, Safari iOS 14.5+)
+// ════════════════════════════════════════════════════════════════
+let _vtActive=null; // currently listening input id
+
+function setupVoiceTyping(){
+  // Wire all voice-type buttons (desktop + mobile drawer)
+  const pairs=[
+    ['tvt','tci'],['pvt','pci'],
+    ['mob-tvt','mob-tci'],['mob-pvt','mob-pci']
+  ];
+  pairs.forEach(([btnId,inpId])=>{
+    const btn=document.getElementById(btnId);
+    if(!btn)return;
+    btn.addEventListener('click',()=>startVoiceTyping(btnId,inpId));
+  });
+}
+
+function startVoiceTyping(btnId, inpId){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    showToast('Voice typing not supported in this browser');
+    return;
+  }
+  // Toggle off if already listening for this button
+  if(_vtActive===btnId){
+    _vtActive=null;
+    document.getElementById(btnId)?.classList.remove('listening');
+    return;
+  }
+  _vtActive=btnId;
+  const btn=document.getElementById(btnId);
+  const inp=document.getElementById(inpId);
+  if(!btn||!inp)return;
+  btn.classList.add('listening');
+  showToast('🎤 Listening…');
+
+  const rec=new SR();
+  rec.lang=navigator.language||'en-US';
+  rec.interimResults=false;
+  rec.maxAlternatives=1;
+  rec.continuous=false;
+
+  rec.onresult=e=>{
+    const transcript=e.results[0][0].transcript;
+    // Append to existing text with space if needed
+    inp.value=(inp.value.trim()?inp.value.trim()+' ':'')+transcript;
+    inp.focus();
+    showToast('✓ "'+transcript.substring(0,40)+(transcript.length>40?'…':'')+'"');
+  };
+  rec.onerror=e=>{
+    const msgs={
+      'not-allowed':'Mic access denied — allow in browser settings',
+      'no-speech':'No speech detected — try again',
+      'network':'Network error during voice recognition',
+    };
+    showToast('⚠ '+(msgs[e.error]||'Voice error: '+e.error));
+  };
+  rec.onend=()=>{
+    _vtActive=null;
+    btn.classList.remove('listening');
+  };
+  rec.start();
+}
+
+// ════════════════════════════════════════════════════════════════
+// MOBILE DRAWER — slide-up panel for chat and players on mobile
+// ════════════════════════════════════════════════════════════════
+function setupMobileDrawer(){
+  const drawer=document.getElementById('mob-drawer');
+  const handle=document.getElementById('mob-handle');
+  const openBtn=document.getElementById('mob-openbtn');
+  if(!drawer)return;
+
+  // Toggle drawer open/close
+  const toggleDrawer=()=>{
+    drawer.classList.toggle('open');
+    handle.textContent=drawer.classList.contains('open')?'⏷':'⏶';
+  };
+  handle.addEventListener('click',toggleDrawer);
+  openBtn?.addEventListener('click',()=>{
+    drawer.classList.add('open');
+    handle.textContent='⏷';
+  });
+
+  // Tab switching
+  document.querySelectorAll('.mob-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('mob-'+tab.dataset.tab)?.classList.add('active');
+    });
+  });
+
+  // Wire mobile chat inputs — mirror to the actual Firebase send functions
+  const wireInput=(inpId,btnId,ch)=>{
+    const inp=document.getElementById(inpId);
+    const btn=document.getElementById(btnId);
+    if(!inp||!btn)return;
+    const send=()=>{const t=inp.value.trim();if(!t)return;sendChat(ch,t);inp.value='';};
+    btn.addEventListener('click',send);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+  };
+  wireInput('mob-tci','mob-tsb','team');
+  wireInput('mob-pci','mob-psb','public');
+}
+
+// Mirror chat messages to mobile panels
+function renderChatMobile(mobileId, msgs){
+  const cont=document.getElementById(mobileId);
+  if(!cont)return;
+  const arr=msgs?Object.values(msgs).sort((a,b)=>a.ts-b.ts):[];
+  cont.innerHTML='';
+  arr.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='msg '+(m.color===myColor?'me':'ot')+(m.system?' sy':'');
+    if(m.system)d.innerHTML=`<span class="mt">${esc(m.text)}</span>`;
+    else d.innerHTML=`<span class="ma ${m.color}">${esc(m.name)}</span><span class="mt">${esc(m.text)}</span>`;
+    cont.appendChild(d);
+  });
+  cont.scrollTop=cont.scrollHeight;
+}
+
+// Mirror players list to mobile panel
+function updPlayersMobile(){
+  const mob=document.getElementById('mob-pl');
+  const src=document.getElementById('pl');
+  if(mob&&src) mob.innerHTML=src.innerHTML;
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
