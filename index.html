@@ -57,7 +57,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .ma.red{color:#909090}.ma.blue{color:#a8d8f0}.ma.green{color:#e04050}.ma.gold{color:#e8900a}.ma.system{color:#506080}
 .mt{font-size:13px;color:#e8d5a0;line-height:1.4;word-break:break-word}
 .msg.sy .mt{font-size:11px;color:#506080;font-style:italic}
-.cir{display:flex;gap:6px;padding:8px 10px;border-top:1px solid rgba(180,140,50,.1);flex-shrink:0}
+.cir{display:flex;gap:6px;padding:8px 10px;border-top:1px solid rgba(180,140,50,.15);flex-shrink:0;background:transparent}
 .cir input{flex:1;font-size:13px;padding:7px 10px}
 .sb{background:rgba(180,140,50,.12);border:1px solid #6b3d10;border-radius:6px;color:#d4a017;font-size:14px;width:32px;min-width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .sb:hover{background:rgba(180,140,50,.26);color:#ffe680}
@@ -322,9 +322,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   /* ── Mobile drawer — slides up from bottom (above hnav) ── */
   #mob-drawer{
     position:fixed;bottom:40px;left:0;right:0;
-    background:rgba(6,12,26,.10);
-    backdrop-filter:blur(24px);
-    -webkit-backdrop-filter:blur(24px);
+    background:transparent;
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
     border-top:1px solid rgba(180,140,50,.30);
     border-radius:14px 14px 0 0;
     z-index:100;
@@ -334,14 +334,14 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     display:flex;flex-direction:column;
   }
   #mob-drawer.open{transform:translateY(0)}
-  .mob-tabs{display:flex;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.25);background:rgba(6,12,26,.15)}
+  .mob-tabs{display:flex;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.20);background:transparent}
   .mob-tab{flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.06em;
     padding:9px 4px 7px;text-align:center;color:#506080;cursor:pointer;
     border:none;background:none;transition:color .15s}
   .mob-tab.active{color:#d4a017;border-bottom:2px solid #d4a017}
   .mob-handle{text-align:center;padding:5px 0 3px;color:#8090a0;font-size:18px;
-    cursor:pointer;flex-shrink:0;line-height:1;letter-spacing:4px;background:rgba(6,12,26,.15)}
-  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0}
+    cursor:pointer;flex-shrink:0;line-height:1;letter-spacing:4px;background:transparent}
+  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;background:transparent}
   .mob-panel.active{display:flex}
 
   /* ── Chat open button (bottom-right above hnav) ── */
