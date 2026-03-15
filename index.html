@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Chaturaji — Four Player Chess</title>
+<title>Strategy Hub — Four Player Chess</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -168,58 +168,131 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .vtbtn:hover{background:rgba(180,140,50,.22)}
 .vtbtn.listening{border-color:#e74c3c;background:rgba(192,57,43,.25);color:#ff6060;animation:pu .5s ease infinite}
 
-/* ── Mobile layout (≤640px) ─────────────────────────────── */
+/* ── Mobile layout (≤640px) ─────────────────────────────────
+   Board = 100vw square, pinned to top.
+   Everything else is a floating overlay.
+   ─────────────────────────────────────────────────────────── */
 @media(max-width:640px){
-  html,body{overflow:hidden;height:100%;height:100dvh}
-  /* Hide side panels on mobile */
-  .gl{display:flex!important;flex-direction:column!important;height:100dvh;overflow:hidden}
+  html,body{overflow:hidden;height:100dvh;touch-action:manipulation}
+
+  /* Game screen: stack vertically, board on top */
+  #gs{overflow:hidden!important}
+  .gl{display:block!important;position:relative;width:100vw;height:100dvh}
+
+  /* Hide desktop side panels completely */
   .sp{display:none!important}
-  /* Board column takes all space */
-  .cc2{flex:1;padding:4px 6px;overflow:hidden;display:flex;flex-direction:column;
-       align-items:center;justify-content:flex-start;gap:2px;min-height:0}
-  /* Board as large as possible */
-  .board-outer{width:100%}
-  .board-corner-row{height:18px}
-  .corner-name-cell{font-size:8px;padding:1px 5px;min-width:48px}
-  #gc{width:100%!important;height:auto!important;aspect-ratio:1}
-  /* Compact controls */
-  .ctrls{margin-top:2px;gap:5px}
-  #td{font-size:10px;padding:3px 10px}
-  .rotbtn{font-size:9px;padding:3px 7px}
-  .actbtn{font-size:9px;padding:3px 7px}
-  .hnav{margin-top:2px;gap:3px}
-  .hnbtn{font-size:9px;padding:3px 7px}
-  .bi{font-size:9px;padding:2px 8px}
-  /* Mobile drawer — slides up from bottom */
+
+  /* Centre column: position relative so overlays anchor to it */
+  .cc2{
+    position:absolute!important;
+    top:0;left:0;right:0;bottom:0;
+    padding:0!important;margin:0!important;
+    display:block!important;
+  }
+
+  /* Board outer: square, full width, no gap */
+  .board-outer{
+    position:absolute;
+    top:0;left:0;
+    width:100vw;
+    display:flex;flex-direction:column;
+  }
+  /* Hide HTML corner-name rows — we draw them on canvas on mobile */
+  .board-corner-row{display:none!important}
+
+  /* Canvas: exact square full width */
+  #board-wrap{width:100vw;height:100vw;position:relative;flex-shrink:0}
+  #gc{
+    display:block!important;
+    width:100vw!important;
+    height:100vw!important;
+    max-width:100vw!important;
+    cursor:pointer;
+    box-shadow:none!important;
+  }
+
+  /* Hide identity labels */
+  #ot,#si{display:none!important}
+
+  /* ── Floating TOP bar: turn indicator ── */
+  .ctrls{
+    position:fixed;
+    top:0;left:0;right:0;
+    height:36px;
+    background:rgba(6,12,26,.82);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    border-bottom:1px solid rgba(180,140,50,.18);
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:0 8px;
+    flex-wrap:nowrap!important;
+    margin:0!important;
+    z-index:50;
+  }
+  #td{font-size:11px;padding:2px 10px;flex:1;text-align:center;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rotbtn{font-size:10px;padding:2px 8px;flex-shrink:0}
+  .actbtn{font-size:10px;padding:2px 8px;flex-shrink:0}
+
+  /* ── Floating BOTTOM bar: prev/next + chat button ── */
+  .hnav{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    height:40px;
+    background:rgba(6,12,26,.82);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    border-top:1px solid rgba(180,140,50,.18);
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:0 8px;
+    margin:0!important;
+    z-index:50;
+  }
+  .hnbtn{font-size:10px;padding:3px 10px}
+  .hpos{font-size:10px}
+
+  /* Promotion modal: centred over board */
+  .pm{position:fixed!important;top:0;left:0;right:0;bottom:0;
+      z-index:200;border-radius:0}
+
+  /* ── Mobile drawer — slides up from bottom (above hnav) ── */
   #mob-drawer{
-    position:fixed;bottom:0;left:0;right:0;
+    position:fixed;bottom:40px;left:0;right:0;
     background:rgba(6,12,26,.98);
     border-top:1px solid rgba(180,140,50,.22);
     border-radius:14px 14px 0 0;
-    z-index:300;
-    transform:translateY(calc(100% - 44px));
-    transition:transform .3s ease;
-    max-height:70dvh;
+    z-index:100;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    max-height:65dvh;
     display:flex;flex-direction:column;
   }
   #mob-drawer.open{transform:translateY(0)}
-  .mob-tabs{display:flex;gap:0;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.12)}
-  .mob-tab{flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.08em;
-    padding:10px 6px 8px;text-align:center;color:#506080;cursor:pointer;
+  .mob-tabs{display:flex;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.12)}
+  .mob-tab{flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.06em;
+    padding:9px 4px 7px;text-align:center;color:#506080;cursor:pointer;
     border:none;background:none;transition:color .15s}
   .mob-tab.active{color:#d4a017;border-bottom:2px solid #d4a017}
-  .mob-handle{text-align:center;padding:6px;color:#506080;font-size:16px;cursor:pointer;
-    flex-shrink:0;line-height:1}
+  .mob-handle{text-align:center;padding:5px 0 3px;color:#506080;font-size:18px;
+    cursor:pointer;flex-shrink:0;line-height:1;letter-spacing:4px}
   .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0}
   .mob-panel.active{display:flex}
-  /* Floating open button for mobile */
+
+  /* ── Chat open button (bottom-right above hnav) ── */
   #mob-openbtn{
-    position:fixed;bottom:50px;right:12px;
-    width:42px;height:42px;border-radius:50%;
-    background:rgba(180,140,50,.18);border:1px solid rgba(180,140,50,.4);
-    color:#d4a017;font-size:18px;cursor:pointer;z-index:299;
-    display:none;align-items:center;justify-content:center;
-    box-shadow:0 4px 16px rgba(0,0,0,.5)
+    position:fixed;bottom:48px;right:10px;
+    width:40px;height:40px;border-radius:50%;
+    background:rgba(180,140,50,.22);
+    border:1px solid rgba(180,140,50,.45);
+    color:#d4a017;font-size:17px;cursor:pointer;
+    z-index:99;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 12px rgba(0,0,0,.55);
   }
 }
 @media(min-width:641px){
@@ -237,8 +310,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   <div class="lw">
    <div>
     <div class="crown">&#9819;</div>
-    <h1 class="gtitle">CHATURAJI</h1>
-    <p class="gsub">Four Kings &middot; Two Teams &middot; Ancient India</p>
+    <h1 class="gtitle">STRATEGY HUB</h1>
+    <p class="gsub">Four Kings &middot; Two Teams &middot; One Board</p>
    </div>
    <div class="lcard">
     <input type="text" id="ni" placeholder="Your name&hellip;" maxlength="20"/>
@@ -886,6 +959,33 @@ function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
     const[,bCol]=d2b(7,i,persp);
     ctx.fillStyle=lt?TH.coordLight:TH.coordDark;ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
   }
+  // On mobile: draw player names directly on canvas corners (HTML rows hidden by CSS)
+  if(GS&&window.innerWidth<=640){
+    const corners=PERSP_CORNERS[persp]||PERSP_CORNERS.red;
+    const elim=GS.eliminated||[];
+    const namePos={tl:[6,6,'left','top'],tr:[634,6,'right','top'],
+                   bl:[6,634,'left','bottom'],br:[634,634,'right','bottom']};
+    ctx.font='bold 13px Cinzel,serif';
+    Object.entries(namePos).forEach(([pos,[px,py,ta,tb]])=>{
+      const color=corners[pos];
+      const p2=GS.players?.[color];
+      const name=p2?.name||(PIECE_COLORS[color]?.label||color);
+      const isElim=elim.includes(color);
+      const isActive=GS.currentTurn===color;
+      const label=(isActive?'▶ ':'')+name;
+      // Background pill
+      ctx.textAlign=ta; ctx.textBaseline=tb;
+      const tw=ctx.measureText(label).width;
+      const bx=ta==='left'?px-3:px-tw-3;
+      const by=tb==='top'?py-2:py-16;
+      ctx.fillStyle=isElim?'rgba(0,0,0,.45)':isActive?'rgba(180,140,0,.65)':'rgba(10,20,40,.72)';
+      ctx.beginPath();
+      ctx.roundRect(bx,by,tw+6,18,4);
+      ctx.fill();
+      ctx.fillStyle=isElim?'rgba(180,180,180,.4)':isActive?'#ffe060':'#d0c8a0';
+      ctx.fillText(label,px,py);
+    });
+  }
   // Check glow — red pulse behind any king currently in check
   // Just visual, no gameplay effect
   if(histIdx<0){  // only in live view
@@ -1031,15 +1131,13 @@ function enterGame(){
 }
 
 function fitCanvas(c){
-  const isMob=window.innerWidth<=640;
-  let sz;
-  if(isMob){
-    // Mobile: fill full screen width minus tiny margin, leave room for controls
-    sz=Math.min(window.innerWidth-12, window.innerHeight-130);
-    sz=Math.max(sz,240);
-    c.style.width='100%'; c.style.height='auto';
+  if(window.innerWidth<=640){
+    // Mobile: CSS sets 100vw x 100vw — JS only sets internal canvas resolution
+    // so coordinate maths stay on a 640x640 grid
+    c.style.width='';   // let CSS control
+    c.style.height='';  // let CSS control
   } else {
-    sz=Math.max(280,Math.min(620,window.innerWidth-540,window.innerHeight-85));
+    const sz=Math.max(280,Math.min(620,window.innerWidth-540,window.innerHeight-85));
     c.style.width=sz+'px'; c.style.height=sz+'px';
   }
 }
