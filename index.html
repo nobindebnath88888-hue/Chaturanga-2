@@ -41,11 +41,11 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 #stat{text-align:center;font-style:italic;color:#b8860b;font-size:13px;min-height:18px}
 #gs{overflow:hidden;align-items:stretch}
 .gl{display:grid;grid-template-columns:255px 1fr 255px;width:100%;height:100vh}
-.sp{background:rgba(4,9,20,.97);border-right:1px solid rgba(180,140,50,.14);display:flex;flex-direction:column;overflow:hidden}
+.sp{background:rgba(4,9,20,.97);border-right:1px solid rgba(180,140,50,.14);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
 .rp{border-right:none;border-left:1px solid rgba(180,140,50,.14)}
 .ph{display:flex;align-items:center;gap:8px;padding:11px 13px;background:rgba(180,140,50,.07);border-bottom:1px solid rgba(180,140,50,.13);font-family:'Cinzel',serif;font-size:10px;letter-spacing:.13em;font-weight:700;color:#d4a017;text-transform:uppercase;flex-shrink:0}
 .tbadge{margin-left:auto;background:rgba(255,255,255,.07);border-radius:100px;padding:2px 9px;font-size:9px}
-.cm{flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:0}
+.cm{flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:0;max-height:220px}
 .cm::-webkit-scrollbar{width:3px}
 .cm::-webkit-scrollbar-thumb{background:#1e3a6e;border-radius:2px}
 .msg{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border-radius:7px;animation:fu .2s ease;max-width:94%}
@@ -61,7 +61,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .cir input{flex:1;font-size:13px;padding:7px 10px}
 .sb{background:rgba(180,140,50,.12);border:1px solid #6b3d10;border-radius:6px;color:#d4a017;font-size:14px;width:32px;min-width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .sb:hover{background:rgba(180,140,50,.26);color:#ffe680}
-.pls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;flex-shrink:0}
+.pls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;flex-shrink:0;overflow:visible}
 .stl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.13em;color:#506080;text-transform:uppercase;margin-bottom:5px}
 .pr{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;font-size:11px;background:rgba(255,255,255,.02);margin-bottom:2px}
 .pd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -80,7 +80,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .pb{width:64px;height:64px;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,50,.18);border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:all .15s;padding:4px}
 .pb:hover{background:rgba(180,140,50,.16);border-color:#b8860b;transform:scale(1.06)}
 .pb span{font-family:'Cinzel',serif;font-size:8px;color:#b8860b}
-.ctrls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.ctrls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:0;margin-bottom:4px}
 #td{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.1em;color:#d4a017;padding:5px 16px;background:rgba(180,140,50,.07);border:1px solid rgba(180,140,50,.16);border-radius:100px}
 .ca{font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.14em;color:#e74c3c;padding:5px 12px;background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.4);border-radius:100px;animation:pu 1s ease infinite}
 @keyframes pu{0%,100%{opacity:1}50%{opacity:.5}}
@@ -106,7 +106,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .tbfill{height:100%;border-radius:3px;transition:width .9s linear}
 .tbfill.red{background:#303030}.tbfill.blue{background:#a8d8f0}.tbfill.green{background:#c01828}.tbfill.gold{background:#e8900a}
 .tbfill.low{background:#e74c3c;animation:pu 0.6s ease infinite}
-.tbtime{min-width:32px;text-align:right;color:#7080a0;font-size:9px}
+.tbtime{min-width:32px;text-align:right;color:#7080a0;font-size:9px;transition:color .3s}
+.tbtime.low{color:#e74c3c;animation:pu 0.6s ease infinite;font-weight:700}
 .actbtn{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.35);border-radius:6px;color:#e74c3c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;margin:2px}
 .actbtn:hover{background:rgba(231,76,60,.28);color:#ff8070}
 .kbtn{background:rgba(150,80,200,.12);border:1px solid rgba(150,80,200,.35);border-radius:6px;color:#c070f0;font-family:'Cinzel',serif;font-size:9px;padding:3px 7px;cursor:pointer;transition:all .15s;margin-left:auto;flex-shrink:0}
@@ -224,10 +225,13 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   }
   .corner-timer{
     font-size:8px;
-    opacity:.85;
+    opacity:.80;
     font-family:'Cinzel',serif;
     letter-spacing:.04em;
+    color:#b8b090!important;
   }
+  /* Timers in mobile drawer suppressed — board corners show them */
+  #mob-pl .timerbar{display:none!important}
   .corner-spacer{flex:1}
 
   /* Canvas: square — leaves room for names above/below + ad space */
@@ -307,9 +311,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   /* ── Mobile drawer — slides up from bottom (above hnav) ── */
   #mob-drawer{
     position:fixed;bottom:40px;left:0;right:0;
-    background:rgba(6,12,26,.55);
-    backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px);
+    background:rgba(6,12,26,.22);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
     border-top:1px solid rgba(180,140,50,.30);
     border-radius:14px 14px 0 0;
     z-index:100;
@@ -417,6 +421,12 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
    </div>
 
    <div class="cc2">
+    <div class="ctrls">
+     <div id="td">Waiting&hellip;</div>
+     <button class="rotbtn" id="rotbtn">&#8635; Rotate</button>
+     <button class="rotbtn" id="themebtn">&#127822; Theme</button>
+     <button class="actbtn" id="resbtn">&#9873; Resign</button>
+    </div>
     <div id="ot" class="bi" style="opacity:0">&#183;</div>
     <div class="board-outer" id="board-outer">
      <div class="board-corner-row">
@@ -438,12 +448,6 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      </div>
     </div>
     <div id="si" class="bi" style="opacity:0">&#183;</div>
-    <div class="ctrls">
-     <div id="td">Waiting&hellip;</div>
-     <button class="rotbtn" id="rotbtn">&#8635; Rotate</button>
-     <button class="rotbtn" id="themebtn">&#127822; Theme</button>
-     <button class="actbtn" id="resbtn">&#9873; Resign</button>
-    </div>
     <div class="hnav">
      <button class="hnbtn" id="hprev" disabled>&#9664; Prev</button>
      <span class="hpos" id="hpos">0/0</span>
@@ -1614,6 +1618,8 @@ function updTimers(){
     const low=left<30000;
     el.querySelector('.tbfill').className='tbfill '+col+(low?' low':'');
     el.querySelector('.tbtime').textContent=fmtTime(left);
+    el.querySelector('.tbtime').className='tbtime'+(low?' low':'');
+    el.querySelector('.tbtime').className='tbtime'+(low?' low':'');
     // Also update corner name timer if present (mobile)
     const ct2=document.getElementById('cntmr-'+col);
     if(ct2) ct2.textContent=fmtTime(left);
@@ -2345,11 +2351,15 @@ function renderChatMobile(mobileId, msgs){
   cont.scrollTop=cont.scrollHeight;
 }
 
-// Mirror players list to mobile panel
+// Mirror players list to mobile panel — strip timer bars (shown at board corners)
 function updPlayersMobile(){
   const mob=document.getElementById('mob-pl');
   const src=document.getElementById('pl');
-  if(mob&&src) mob.innerHTML=src.innerHTML;
+  if(!mob||!src)return;
+  // Clone and remove timerbar divs to avoid duplicate IDs
+  const clone=src.cloneNode(true);
+  clone.querySelectorAll('.timerbar').forEach(el=>el.remove());
+  mob.innerHTML=clone.innerHTML;
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
