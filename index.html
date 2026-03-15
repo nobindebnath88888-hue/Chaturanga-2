@@ -50,8 +50,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .cm::-webkit-scrollbar-thumb{background:#1e3a6e;border-radius:2px}
 .msg{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border-radius:7px;animation:fu .2s ease;max-width:94%}
 @keyframes fu{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.msg.me{background:rgba(180,140,50,.1);align-self:flex-end}
-.msg.ot{background:rgba(255,255,255,.04);align-self:flex-start}
+.msg.me{background:rgba(180,140,50,.22);align-self:flex-end}
+.msg.ot{background:rgba(255,255,255,.12);align-self:flex-start}
 .msg.sy{background:transparent;align-self:center;text-align:center}
 .ma{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.07em;font-weight:700}
 .ma.red{color:#909090}.ma.blue{color:#a8d8f0}.ma.green{color:#e04050}.ma.gold{color:#e8900a}.ma.system{color:#506080}
@@ -190,23 +190,66 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     display:block!important;
   }
 
-  /* Board outer: square, full width, no gap */
+  /* Board outer: below top bar, names outside canvas top/bottom */
   .board-outer{
     position:absolute;
-    top:0;left:0;
-    width:100vw;
-    display:flex;flex-direction:column;
+    top:36px;           /* below top control bar */
+    left:0;right:0;
+    bottom:40px;        /* above bottom nav bar */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:0;
   }
-  /* Hide HTML corner-name rows — we draw them on canvas on mobile */
-  .board-corner-row{display:none!important}
+  /* Corner name rows — shown on mobile, compact */
+  .board-corner-row{
+    width:100%;
+    display:flex!important;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 4px;
+    height:auto;
+    flex-shrink:0;
+  }
+  .corner-name-cell{
+    font-size:9px!important;
+    padding:1px 5px!important;
+    min-width:52px!important;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0;
+    line-height:1.2;
+  }
+  .corner-timer{
+    font-size:8px;
+    opacity:.85;
+    font-family:'Cinzel',serif;
+    letter-spacing:.04em;
+  }
+  .corner-spacer{flex:1}
 
-  /* Canvas: exact square full width */
-  #board-wrap{width:100vw;height:100vw;position:relative;flex-shrink:0}
+  /* Canvas: square — leaves room for names above/below + ad space */
+  /* Total overhead: 36 top-bar + 22 top-names + 22 bot-names + 50 ad-space + 40 bot-bar = 170px */
+  #board-wrap{
+    position:relative;flex-shrink:0;
+    width:min(100vw, calc(100dvh - 170px));
+    height:min(100vw, calc(100dvh - 170px));
+  }
+  /* Ad space placeholder below board (before bottom corner row) */
+  #ad-space{
+    flex:1;
+    width:100%;
+    min-height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
   #gc{
     display:block!important;
-    width:100vw!important;
-    height:100vw!important;
-    max-width:100vw!important;
+    width:100%!important;
+    height:100%!important;
     cursor:pointer;
     box-shadow:none!important;
   }
@@ -264,8 +307,10 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   /* ── Mobile drawer — slides up from bottom (above hnav) ── */
   #mob-drawer{
     position:fixed;bottom:40px;left:0;right:0;
-    background:rgba(6,12,26,.98);
-    border-top:1px solid rgba(180,140,50,.22);
+    background:rgba(6,12,26,.55);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    border-top:1px solid rgba(180,140,50,.30);
     border-radius:14px 14px 0 0;
     z-index:100;
     transform:translateY(100%);
@@ -385,6 +430,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
        <div class="pi"><p>Promote Pawn to:</p><div id="pc2"></div></div>
       </div>
      </div>
+     <div id="ad-space"></div>
      <div class="board-corner-row">
       <div class="corner-name-cell" id="cn-bl"></div>
       <div class="corner-spacer"></div>
@@ -959,33 +1005,7 @@ function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
     const[,bCol]=d2b(7,i,persp);
     ctx.fillStyle=lt?TH.coordLight:TH.coordDark;ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText(String.fromCharCode(97+bCol),(i+1)*S-3,640-2);
   }
-  // On mobile: draw player names directly on canvas corners (HTML rows hidden by CSS)
-  if(GS&&window.innerWidth<=640){
-    const corners=PERSP_CORNERS[persp]||PERSP_CORNERS.red;
-    const elim=GS.eliminated||[];
-    const namePos={tl:[6,6,'left','top'],tr:[634,6,'right','top'],
-                   bl:[6,634,'left','bottom'],br:[634,634,'right','bottom']};
-    ctx.font='bold 13px Cinzel,serif';
-    Object.entries(namePos).forEach(([pos,[px,py,ta,tb]])=>{
-      const color=corners[pos];
-      const p2=GS.players?.[color];
-      const name=p2?.name||(PIECE_COLORS[color]?.label||color);
-      const isElim=elim.includes(color);
-      const isActive=GS.currentTurn===color;
-      const label=(isActive?'▶ ':'')+name;
-      // Background pill
-      ctx.textAlign=ta; ctx.textBaseline=tb;
-      const tw=ctx.measureText(label).width;
-      const bx=ta==='left'?px-3:px-tw-3;
-      const by=tb==='top'?py-2:py-16;
-      ctx.fillStyle=isElim?'rgba(0,0,0,.45)':isActive?'rgba(180,140,0,.65)':'rgba(10,20,40,.72)';
-      ctx.beginPath();
-      ctx.roundRect(bx,by,tw+6,18,4);
-      ctx.fill();
-      ctx.fillStyle=isElim?'rgba(180,180,180,.4)':isActive?'#ffe060':'#d0c8a0';
-      ctx.fillText(label,px,py);
-    });
-  }
+  // Names drawn as HTML corner rows (outside canvas)
   // Check glow — red pulse behind any king currently in check
   // Just visual, no gameplay effect
   if(histIdx<0){  // only in live view
@@ -1177,6 +1197,9 @@ function updCornerNames(){
   if(!GS)return;
   const corners=PERSP_CORNERS[perspective]||PERSP_CORNERS.red;
   const elim=GS.eliminated||[];
+  const TOTAL=300000;
+  const raw=GS.timers||{};
+  const ct=GS.currentTurn;
   ['tl','tr','bl','br'].forEach(pos=>{
     const cell=document.getElementById('cn-'+pos);
     if(!cell)return;
@@ -1185,10 +1208,22 @@ function updCornerNames(){
     const name=p?.name||(PIECE_COLORS[color]?.label||color);
     const isElim=elim.includes(color);
     const isActive=GS.currentTurn===color;
-    cell.textContent=(isActive?'▶ ':'')+name;
+    // Timer for this player
+    let timeStr='5:00';
+    if(GS.gameStarted){
+      const base=raw[color]||TOTAL;
+      const used=(ct===color&&GS.turnStartedAt)?Math.max(0,Date.now()-GS.turnStartedAt):0;
+      const left=Math.max(0,base-used);
+      timeStr=fmtTime(left);
+    }
     cell.className='corner-name-cell '+CORNER_CLASS[color]
       +(isElim?' elim':'')
       +(isActive&&!isElim?' active':'');
+    cell.innerHTML=
+      '<span>'+(isActive?'▶ ':'')+esc(name)+'</span>'
+      +'<span class="corner-timer" id="cntmr-'+color+'">'
+      +(isElim?'out':timeStr)
+      +'</span>';
   });
 }
 
@@ -1579,6 +1614,9 @@ function updTimers(){
     const low=left<30000;
     el.querySelector('.tbfill').className='tbfill '+col+(low?' low':'');
     el.querySelector('.tbtime').textContent=fmtTime(left);
+    // Also update corner name timer if present (mobile)
+    const ct2=document.getElementById('cntmr-'+col);
+    if(ct2) ct2.textContent=fmtTime(left);
   });
 }
 
