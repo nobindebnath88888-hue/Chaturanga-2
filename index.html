@@ -19,7 +19,7 @@ body{background:#0a1628;background-image:radial-gradient(ellipse 80% 50% at 50% 
 @keyframes sh{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
 .gsub{font-style:italic;font-size:15px;color:#9080a0;text-align:center;margin-top:3px}
 .lcard{background:rgba(8,14,30,.97);border:1px solid rgba(180,140,50,.28);border-radius:16px;padding:28px;width:min(440px,92vw);display:flex;flex-direction:column;gap:15px;box-shadow:0 0 60px rgba(0,0,0,.75)}
-input[type=text]{width:100%;background:rgba(255,255,255,.05);border:1px solid #1e3a6e;border-radius:7px;color:#e8d5a0;font-family:'Cinzel',serif;font-size:13px;padding:10px 13px;outline:none;transition:border-color .2s}
+input[type=text]{width:100%;background:rgba(8,16,40,.85);border:1px solid #1e3a6e;border-radius:7px;color:#e8d5a0;font-family:'Cinzel',serif;font-size:13px;padding:10px 13px;outline:none;transition:border-color .2s}
 input[type=text]::placeholder{color:#506080;font-family:'Crimson Text',serif;font-style:italic}
 input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,.2)}
 .lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#7080a0;text-transform:uppercase}
@@ -45,14 +45,14 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .rp{border-right:none;border-left:1px solid rgba(180,140,50,.14)}
 .ph{display:flex;align-items:center;gap:8px;padding:11px 13px;background:rgba(180,140,50,.07);border-bottom:1px solid rgba(180,140,50,.13);font-family:'Cinzel',serif;font-size:10px;letter-spacing:.13em;font-weight:700;color:#d4a017;text-transform:uppercase;flex-shrink:0}
 .tbadge{margin-left:auto;background:rgba(255,255,255,.07);border-radius:100px;padding:2px 9px;font-size:9px}
-.cm{flex:1;overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:0;max-height:220px}
+.cm{overflow-y:auto;padding:9px;display:flex;flex-direction:column;gap:6px;min-height:60px;max-height:180px;flex-shrink:1}
 .cm::-webkit-scrollbar{width:3px}
 .cm::-webkit-scrollbar-thumb{background:#1e3a6e;border-radius:2px}
 .msg{display:flex;flex-direction:column;gap:2px;padding:6px 9px;border-radius:7px;animation:fu .2s ease;max-width:94%}
 @keyframes fu{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.msg.me{background:rgba(180,140,50,.22);align-self:flex-end}
-.msg.ot{background:rgba(255,255,255,.12);align-self:flex-start}
-.msg.sy{background:transparent;align-self:center;text-align:center}
+.msg.me{background:rgba(140,100,10,.82);align-self:flex-end}
+.msg.ot{background:rgba(10,20,50,.80);align-self:flex-start}
+.msg.sy{background:rgba(6,12,26,.65);align-self:center;text-align:center;border-radius:6px;padding:3px 8px}
 .ma{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.07em;font-weight:700}
 .ma.red{color:#909090}.ma.blue{color:#a8d8f0}.ma.green{color:#e04050}.ma.gold{color:#e8900a}.ma.system{color:#506080}
 .mt{font-size:13px;color:#e8d5a0;line-height:1.4;word-break:break-word}
@@ -61,7 +61,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .cir input{flex:1;font-size:13px;padding:7px 10px}
 .sb{background:rgba(180,140,50,.12);border:1px solid #6b3d10;border-radius:6px;color:#d4a017;font-size:14px;width:32px;min-width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .sb:hover{background:rgba(180,140,50,.26);color:#ffe680}
-.pls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;flex-shrink:0;overflow:visible}
+.pls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;flex-shrink:0;overflow:visible;min-height:0}
 .stl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.13em;color:#506080;text-transform:uppercase;margin-bottom:5px}
 .pr{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;font-size:11px;background:rgba(255,255,255,.02);margin-bottom:2px}
 .pd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -102,11 +102,11 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .to-name{color:#7080a0}
 .to-sep{color:#506080;margin:0 2px}
 .timerbar{display:flex;align-items:center;gap:6px;padding:3px 6px;font-family:'Cinzel',serif;font-size:9px}
-.tbtrack{flex:1;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden}
+.tbtrack{flex:1;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden}
 .tbfill{height:100%;border-radius:3px;transition:width .9s linear}
-.tbfill.red{background:#303030}.tbfill.blue{background:#a8d8f0}.tbfill.green{background:#c01828}.tbfill.gold{background:#e8900a}
-.tbfill.low{background:#e74c3c;animation:pu 0.6s ease infinite}
-.tbtime{min-width:32px;text-align:right;color:#7080a0;font-size:9px;transition:color .3s}
+.tbfill.red,.tbfill.blue,.tbfill.green,.tbfill.gold{background:rgba(200,200,200,.45)}
+.tbfill.low{background:rgba(255,255,255,.65);animation:pu 0.5s ease infinite}
+.tbtime{min-width:34px;text-align:right;color:#a0b0c0;font-size:10px;font-weight:600;transition:color .3s}
 .tbtime.low{color:#e74c3c;animation:pu 0.6s ease infinite;font-weight:700}
 .actbtn{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.35);border-radius:6px;color:#e74c3c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;margin:2px}
 .actbtn:hover{background:rgba(231,76,60,.28);color:#ff8070}
@@ -152,9 +152,11 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .vcpeer-dot.live{background:#27ae60;animation:pu .8s ease infinite}
 /* Board corner name labels — outside the canvas */
 .board-outer{display:flex;flex-direction:column;align-items:stretch;gap:0}
-.board-corner-row{display:flex;align-items:center;justify-content:space-between;gap:4px;height:22px;padding:0 2px}
+.board-corner-row{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;min-height:22px;padding:2px 2px;}
 .corner-spacer{flex:1}
-.corner-name-cell{font-family:'Cinzel',serif;font-size:9px;font-weight:700;letter-spacing:.07em;padding:2px 7px;border-radius:4px;white-space:nowrap;line-height:1.4;min-width:60px;text-align:center}
+.corner-name-cell{font-family:'Cinzel',serif;font-size:9px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:4px;line-height:1.3;min-width:60px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px}
+.corner-captured{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;align-items:center;max-width:120px}
+.corner-captured canvas{display:block;border-radius:1px}
 .corner-name-cell.black-p {background:rgba(18,18,18,.92);color:#c0c0c0;border:1px solid #404040}
 .corner-name-cell.white-p {background:rgba(180,230,255,.92);color:#1a3a4a;border:1px solid #88c8e8}
 .corner-name-cell.silver-p{background:rgba(100,8,16,.92);color:#ffc0c8;border:1px solid #c01828}
@@ -230,8 +232,13 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     letter-spacing:.04em;
     color:#b8b090!important;
   }
-  /* Timers in mobile drawer suppressed — board corners show them */
-  #mob-pl .timerbar{display:none!important}
+  /* Hide ALL timerbars on mobile — corner cells show time text instead */
+  .timerbar{display:none!important}
+  /* Hide bottom corner row when drawer is open (it would peek above drawer) */
+  #mob-drawer.open ~ * .board-corner-row:last-of-type,
+  body.drawer-open .board-outer .board-corner-row:last-of-type{
+    opacity:0;pointer-events:none;
+  }
   .corner-spacer{flex:1}
 
   /* Canvas: square — leaves room for names above/below + ad space */
@@ -311,9 +318,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   /* ── Mobile drawer — slides up from bottom (above hnav) ── */
   #mob-drawer{
     position:fixed;bottom:40px;left:0;right:0;
-    background:rgba(6,12,26,.22);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
+    background:rgba(6,12,26,.12);
+    backdrop-filter:blur(22px);
+    -webkit-backdrop-filter:blur(22px);
     border-top:1px solid rgba(180,140,50,.30);
     border-radius:14px 14px 0 0;
     z-index:100;
@@ -323,13 +330,13 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     display:flex;flex-direction:column;
   }
   #mob-drawer.open{transform:translateY(0)}
-  .mob-tabs{display:flex;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.12)}
+  .mob-tabs{display:flex;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.25);background:rgba(6,12,26,.55)}
   .mob-tab{flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.06em;
     padding:9px 4px 7px;text-align:center;color:#506080;cursor:pointer;
     border:none;background:none;transition:color .15s}
   .mob-tab.active{color:#d4a017;border-bottom:2px solid #d4a017}
-  .mob-handle{text-align:center;padding:5px 0 3px;color:#506080;font-size:18px;
-    cursor:pointer;flex-shrink:0;line-height:1;letter-spacing:4px}
+  .mob-handle{text-align:center;padding:5px 0 3px;color:#8090a0;font-size:18px;
+    cursor:pointer;flex-shrink:0;line-height:1;letter-spacing:4px;background:rgba(6,12,26,.55)}
   .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0}
   .mob-panel.active{display:flex}
 
@@ -1033,9 +1040,7 @@ function renderBoard(ctx,board,selSq,legals,lastMv,persp,elimSet){
           ctx.fillStyle=grad;
           ctx.fillRect(dc2*S,dr2*S,S,S);
           // Bright red border around the square
-          ctx.strokeStyle='rgba(255,60,60,0.85)';
-          ctx.lineWidth=3;
-          ctx.strokeRect(dc2*S+1.5,dr2*S+1.5,S-3,S-3);
+          // No red border — just the glow
           break;
         }
       }
@@ -1204,6 +1209,8 @@ function updCornerNames(){
   const TOTAL=300000;
   const raw=GS.timers||{};
   const ct=GS.currentTurn;
+  const allCaptures=GS.captures||{};
+
   ['tl','tr','bl','br'].forEach(pos=>{
     const cell=document.getElementById('cn-'+pos);
     if(!cell)return;
@@ -1212,7 +1219,8 @@ function updCornerNames(){
     const name=p?.name||(PIECE_COLORS[color]?.label||color);
     const isElim=elim.includes(color);
     const isActive=GS.currentTurn===color;
-    // Timer for this player
+
+    // Timer
     let timeStr='5:00';
     if(GS.gameStarted){
       const base=raw[color]||TOTAL;
@@ -1220,14 +1228,52 @@ function updCornerNames(){
       const left=Math.max(0,base-used);
       timeStr=fmtTime(left);
     }
+
     cell.className='corner-name-cell '+CORNER_CLASS[color]
       +(isElim?' elim':'')
       +(isActive&&!isElim?' active':'');
+
+    // Build HTML: name + timer
     cell.innerHTML=
       '<span>'+(isActive?'▶ ':'')+esc(name)+'</span>'
       +'<span class="corner-timer" id="cntmr-'+color+'">'
-      +(isElim?'out':timeStr)
-      +'</span>';
+      +(isElim?'out':timeStr)+'</span>';
+
+    // Captured pieces — tiny canvases
+    const caps=allCaptures[color]
+      ? Object.values(allCaptures[color])
+      : [];
+    if(caps.length>0){
+      const row=document.createElement('div');
+      row.className='corner-captured';
+      // Sort: show most valuable first (Q R B N P)
+      const order={Q:0,R:1,B:2,N:3,P:4,K:5};
+      const sorted=[...caps].sort((a,b)=>(order[a.type]||9)-(order[b.type]||9));
+      sorted.forEach(cap=>{
+        const sz=14; // tiny icon size px
+        const cv=document.createElement('canvas');
+        cv.width=sz; cv.height=sz;
+        cv.title=PIECE_COLORS[cap.color]?.label||cap.color;
+        const ctx2=cv.getContext('2d');
+        // Draw immediately if cached, else try after short delay
+        const tryDraw=()=>{
+          const cached=_pieceImg[cap.type+'_'+cap.color];
+          if(cached){
+            ctx2.drawImage(cached,0,0,sz,sz);
+          } else {
+            ctx2.fillStyle=PIECE_COLORS[cap.color]?.fill||'#888';
+            ctx2.font=`bold ${sz*0.7}px serif`;
+            ctx2.textAlign='center'; ctx2.textBaseline='middle';
+            ctx2.fillText(cap.type, sz/2, sz/2);
+          }
+        };
+        tryDraw();
+        // Retry once after pieces load from CDN
+        setTimeout(tryDraw, 1200);
+        row.appendChild(cv);
+      });
+      cell.appendChild(row);
+    }
   });
 }
 
@@ -1311,6 +1357,10 @@ async function commitMove(move,promo){
   const elim=GS.eliminated||[];
   _elimSet=new Set(elim); // keep in sync for isFriend calls
   const cr=deserCR(GS.castlingRights);
+
+  // Record captured piece BEFORE applying move
+  const capturedPiece=move.capture?gp(board,move.to[0],move.to[1]):null;
+
   const newBoard=applyMove(board,move,promo);
   const newCR=updateCR(cr,move,board);
 
@@ -1364,6 +1414,17 @@ async function commitMove(move,promo){
       const used=now-GS.turnStartedAt;
       newTimers[myColor]=Math.max(0,(rawTimers[myColor]||300000)-used);
     }
+    // Build updated captures map
+    const rawCaptures=GS.captures||{};
+    const newCaptures={...rawCaptures};
+    if(capturedPiece){
+      const existing=newCaptures[myColor]
+        ? Object.values(newCaptures[myColor])
+        : [];
+      existing.push({type:capturedPiece.type,color:capturedPiece.color});
+      newCaptures[myColor]=Object.fromEntries(existing.map((p,i)=>[i,p]));
+    }
+
     await update(ref(db2,`rooms/${roomId}`),{
       board:newBoard,
       currentTurn:winner?null:nextColor,
@@ -1375,6 +1436,7 @@ async function commitMove(move,promo){
       timers:newTimers,
       turnStartedAt:winner?null:now,
       gameStarted:true,
+      captures:newCaptures,
     });
     // Store board snapshot + elim state for move history browsing
     const boardSnap=newBoard.map(p=>p?{type:p.type,color:p.color}:null);
@@ -2305,11 +2367,18 @@ function setupMobileDrawer(){
   const toggleDrawer=()=>{
     drawer.classList.toggle('open');
     handle.textContent=drawer.classList.contains('open')?'⏷':'⏶';
+    // Hide bottom corner row when drawer open so names don't float above it
+    const rows=document.querySelectorAll('.board-corner-row');
+    const lastRow=rows[rows.length-1];
+    if(lastRow) lastRow.style.opacity=drawer.classList.contains('open')?'0':'1';
   };
   handle.addEventListener('click',toggleDrawer);
   openBtn?.addEventListener('click',()=>{
     drawer.classList.add('open');
     handle.textContent='⏷';
+    const rows=document.querySelectorAll('.board-corner-row');
+    const lastRow=rows[rows.length-1];
+    if(lastRow) lastRow.style.opacity='0';
   });
 
   // Tab switching
