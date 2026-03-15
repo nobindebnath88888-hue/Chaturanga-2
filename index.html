@@ -68,8 +68,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .pd.red{background:#2a2a2a}.pd.blue{background:#dff4ff}.pd.green{background:#c01828}.pd.gold{background:#e8900a}
 .pnl{color:#e8d5a0;flex:1;font-size:11px}.ps{font-size:10px;color:#506080}.ps.on{color:#d4a017}
 .rid{font-family:'Cinzel',serif;font-size:10px;color:#506080;text-align:center;margin-top:5px}.rid span{color:#b8860b;font-weight:700}
-.cc2{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px}
-.bi{font-family:'Cinzel',serif;font-size:11px;color:#7080a0;padding:3px 12px;background:rgba(255,255,255,.03);border-radius:100px;border:1px solid rgba(255,255,255,.05)}
+.cc2{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:6px 8px;overflow-y:auto;min-height:0}
+.bi{font-family:'Cinzel',serif;font-size:11px;color:#7080a0;padding:3px 12px;background:rgba(255,255,255,.03);border-radius:100px;border:1px solid rgba(255,255,255,.05);display:none}
 .bc{position:relative;flex-shrink:0}
 #gc{display:block;border-radius:6px;cursor:pointer;box-shadow:0 0 0 1px rgba(160,190,220,.25),0 0 0 5px rgba(100,140,170,.18),0 0 0 7px rgba(0,0,0,.35),0 20px 60px rgba(0,0,0,.75);}
 .pm{position:absolute;inset:0;background:rgba(4,9,20,.9);display:flex;align-items:center;justify-content:center;border-radius:3px;z-index:100}
@@ -119,7 +119,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .vote-box p{font-size:13px;color:#9090a0;margin-bottom:16px}
 .vote-btns{display:flex;gap:10px;justify-content:center}
 .inactivity-warn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(231,76,60,.92);color:#fff;font-family:'Cinzel',serif;font-size:13px;letter-spacing:.1em;padding:10px 22px;border-radius:8px;pointer-events:none;z-index:150;text-align:center}
-.hnav{display:flex;align-items:center;gap:5px;margin-top:4px;justify-content:center}
+.hnav{display:flex;align-items:center;gap:5px;margin-top:2px;justify-content:center;flex-shrink:0}
 .hnbtn{background:rgba(180,140,50,.12);border:1px solid rgba(180,140,50,.3);border-radius:6px;color:#d4a017;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .hnbtn:hover:not(:disabled){background:rgba(180,140,50,.26);color:#ffe680}
 .hnbtn:disabled{opacity:.3;cursor:default}
@@ -1156,12 +1156,12 @@ function enterGame(){
 
 function fitCanvas(c){
   if(window.innerWidth<=640){
-    // Mobile: CSS sets 100vw x 100vw — JS only sets internal canvas resolution
-    // so coordinate maths stay on a 640x640 grid
-    c.style.width='';   // let CSS control
-    c.style.height='';  // let CSS control
+    c.style.width='';
+    c.style.height='';
   } else {
-    const sz=Math.max(280,Math.min(620,window.innerWidth-540,window.innerHeight-85));
+    // Subtract side panels (255+255=510) + own padding (30) = 540 horizontal
+    // Subtract all vertical elements above/below board = ~210px
+    const sz=Math.max(260,Math.min(640,window.innerWidth-540,window.innerHeight-210));
     c.style.width=sz+'px'; c.style.height=sz+'px';
   }
 }
