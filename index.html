@@ -72,7 +72,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .cc2{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;padding:6px 8px;overflow-y:auto;min-height:0}
 .bi{font-family:'Cinzel',serif;font-size:11px;color:#7080a0;padding:3px 12px;background:rgba(255,255,255,.03);border-radius:100px;border:1px solid rgba(255,255,255,.05);display:none}
 .bc{position:relative;flex-shrink:0}
-#gc{display:block;border-radius:6px;cursor:pointer;box-shadow:0 0 0 1px rgba(160,190,220,.25),0 0 0 5px rgba(100,140,170,.18),0 0 0 7px rgba(0,0,0,.35),0 20px 60px rgba(0,0,0,.75);}
+#gc{display:block;border-radius:6px;cursor:pointer;box-shadow:0 0 0 1px rgba(160,190,220,.25),0 0 0 5px rgba(100,140,170,.18),0 0 0 7px rgba(0,0,0,.35),0 6px 20px rgba(0,0,0,.55);}
 .pm{position:absolute;inset:0;background:rgba(4,9,20,.9);display:flex;align-items:center;justify-content:center;border-radius:3px;z-index:100}
 .pm.hidden{display:none}
 .pi{background:rgba(8,15,32,.98);border:1px solid rgba(180,140,50,.28);border-radius:14px;padding:20px;text-align:center}
@@ -152,8 +152,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .vcpeer-dot{width:6px;height:6px;border-radius:50%;background:#506080}
 .vcpeer-dot.live{background:#27ae60;animation:pu .8s ease infinite}
 /* Board corner name labels — outside the canvas */
-.board-outer{display:flex;flex-direction:column;align-items:stretch;gap:0}
-.board-corner-row{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;min-height:22px;padding:2px 2px;}
+.board-outer{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.board-corner-row{display:flex;align-items:flex-start;justify-content:space-between;gap:4px;min-height:22px;padding:2px 2px;position:relative;z-index:10;}
 .corner-spacer{flex:1}
 .corner-name-cell{font-family:'Cinzel',serif;font-size:9px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:4px;line-height:1.3;min-width:60px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px}
 .corner-captured{display:flex;flex-wrap:wrap;gap:1px;justify-content:center;align-items:center;max-width:120px}
@@ -175,7 +175,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 
 /* ── Board notification toast ── */
 #board-notif{
-  position:absolute;
+  position:fixed;
   top:50%;left:50%;
   transform:translate(-50%,-50%) scale(0.85);
   background:rgba(6,12,26,.92);
@@ -195,6 +195,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 #board-notif.show{
   opacity:1;
   transform:translate(-50%,-50%) scale(1);
+  z-index:400;
 }
 #board-notif .bn-title{
   font-family:'Cinzel',serif;
@@ -300,7 +301,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   /* Canvas: square — leaves room for names above/below + ad space */
   /* Total overhead: 36 top-bar + 22 top-names + 22 bot-names + 50 ad-space + 40 bot-bar = 170px */
   #board-wrap{
-    position:relative;flex-shrink:0;
+    position:relative!important;flex-shrink:0;
     width:min(100vw, calc(100dvh - 170px));
     height:min(100vw, calc(100dvh - 170px));
   }
@@ -1980,7 +1981,7 @@ function showWin(team){
   const n1=GS?.players?.[winners[0]]?.name||(PIECE_COLORS[winners[0]]?.label||winners[0]);
   const n2=GS?.players?.[winners[1]]?.name||(PIECE_COLORS[winners[1]]?.label||winners[1]);
   sysChat('\uD83C\uDFC6 TEAM '+team+' WINS! \u2014 '+n1+' & '+n2);
-  showBoardNotif('\uD83C\uDFC6 TEAM '+team+' WINS!',n1+' & '+n2,0);
+  showBoardNotif('\uD83C\uDFC6 TEAM '+team+' WINS!',n1+' & '+n2,4500);
 }
 
 
