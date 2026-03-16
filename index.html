@@ -173,6 +173,44 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .vtbtn:hover{background:rgba(180,140,50,.22)}
 .vtbtn.listening{border-color:#e74c3c;background:rgba(192,57,43,.25);color:#ff6060;animation:pu .5s ease infinite}
 
+/* ── Board notification toast ── */
+#board-notif{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) scale(0.85);
+  background:rgba(6,12,26,.92);
+  border:1px solid rgba(180,140,50,.45);
+  border-radius:12px;
+  padding:14px 22px;
+  text-align:center;
+  pointer-events:none;
+  z-index:120;
+  opacity:0;
+  transition:opacity .3s ease, transform .3s ease;
+  min-width:220px;
+  max-width:88%;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+#board-notif.show{
+  opacity:1;
+  transform:translate(-50%,-50%) scale(1);
+}
+#board-notif .bn-title{
+  font-family:'Cinzel',serif;
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:.12em;
+  color:#ffe680;
+  margin-bottom:4px;
+}
+#board-notif .bn-sub{
+  font-family:'Cinzel',serif;
+  font-size:11px;
+  color:#a0b8c8;
+  letter-spacing:.07em;
+  line-height:1.5;
+}
 /* ── Drag piece overlay ── */
 #drag-piece{
   position:fixed;
@@ -468,6 +506,10 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
       <canvas id="gc" width="640" height="640"></canvas>
       <div id="pm" class="pm hidden">
        <div class="pi"><p>Promote Pawn to:</p><div id="pc2"></div></div>
+      </div>
+      <div id="board-notif">
+       <div class="bn-title" id="bn-title"></div>
+       <div class="bn-sub" id="bn-sub"></div>
       </div>
      </div>
      <div class="board-corner-row">
@@ -1402,12 +1444,18 @@ async function commitMove(move,promo){
       // King was physically captured this move
       newElim.push(col);
       newElimSet.add(col);
-      SFX.eliminate(); sysChat((GS.players?.[col]?.name||col)+"'s king was captured — eliminated! ☠ Pieces stay on board (now gray).");
+      const kcName=(GS.players?.[col]?.name||PIECE_COLORS[col]?.label||col);
+      SFX.eliminate();
+      sysChat(kcName+"'s king was captured — eliminated! ☠");
+      showBoardNotif('☠ Eliminated', kcName+"'s king captured", 2500);
     } else if(isCheckmate(newBoard, col, newCR, newElimSet)){
       // King is in check with no legal escape
       newElim.push(col);
       newElimSet.add(col);
-      SFX.eliminate(); sysChat((GS.players?.[col]?.name||col)+" is in checkmate — eliminated! ☢ Pieces stay on board (now gray).");
+      const cmName=(GS.players?.[col]?.name||PIECE_COLORS[col]?.label||col);
+      SFX.eliminate();
+      sysChat(cmName+" is in checkmate — eliminated! ☢");
+      showBoardNotif('♟ Checkmate', cmName+' is eliminated', 2500);
     }
   });
 
@@ -1561,7 +1609,10 @@ async function doAutoResign(color,reason){
   if(!GS||GS.winner)return;
   const elim=GS.eliminated||[];
   if(elim.includes(color))return;
-  sysChat((GS.players?.[color]?.name||color)+' was auto-resigned ('+reason+'). ⏱');
+  const arName=(GS.players?.[color]?.name||PIECE_COLORS[color]?.label||color);
+  const arMsg=arName+' was auto-resigned ('+reason+'). ⏱';
+  sysChat(arMsg);
+  showBoardNotif('⏱ Auto-Resign', arMsg, 3000);
   SFX.eliminate();
   await forceEliminate(color);
 }
@@ -1796,6 +1847,7 @@ async function checkResignVotes(){
     if(others.length===0){
       await remove(ref(db2,`rooms/${roomId}/resignVotes/${requester}`));
       sysChat((GS.players?.[requester]?.name||requester)+' resigned. \uD83C\uDFF3');
+      showBoardNotif('\uD83C\uDFF3 Resigned',(GS.players?.[requester]?.name||requester)+' resigned',3000);
       SFX.eliminate();await forceEliminate(requester);return;
     }
     const vlist=Object.entries(votes||{}).filter(([k])=>k!=='requestedAt');
@@ -1809,6 +1861,7 @@ async function checkResignVotes(){
     if(yesVotes>=needed){
       await remove(ref(db2,`rooms/${roomId}/resignVotes/${requester}`));
       sysChat((GS.players?.[requester]?.name||requester)+' resigned. \uD83C\uDFF3');
+      showBoardNotif('\uD83C\uDFF3 Resigned',(GS.players?.[requester]?.name||requester)+' resigned',3000);
       SFX.eliminate();await forceEliminate(requester);return;
     }
   }
@@ -1906,11 +1959,28 @@ function updPlayers(){
   updPlayersMobile();
 }
 
+function showBoardNotif(title,sub,ms){
+  const notif=document.getElementById('board-notif');
+  const tEl=document.getElementById('bn-title');
+  const sEl=document.getElementById('bn-sub');
+  if(!notif||!tEl||!sEl)return;
+  tEl.textContent=title;
+  sEl.innerHTML=sub||'';
+  notif.classList.add('show');
+  clearTimeout(notif._hideTimer);
+  if(ms>0) notif._hideTimer=setTimeout(()=>notif.classList.remove('show'),ms);
+}
+
 function showWin(team){
   SFX.victory();
   const el=document.getElementById('td');
-  el.textContent='\uD83C\uDFC6 TEAM '+team+' WINS!';el.style.color='#ffe680';el.style.fontSize='16px';
-  sysChat('\uD83C\uDFC6 TEAM '+team+' WINS!');
+  el.textContent='\uD83C\uDFC6 TEAM '+team+' WINS!';
+  el.style.color='#ffe680';el.style.fontSize='16px';
+  const winners=COLORS.filter(c=>TEAMS[c]===team);
+  const n1=GS?.players?.[winners[0]]?.name||(PIECE_COLORS[winners[0]]?.label||winners[0]);
+  const n2=GS?.players?.[winners[1]]?.name||(PIECE_COLORS[winners[1]]?.label||winners[1]);
+  sysChat('\uD83C\uDFC6 TEAM '+team+' WINS! \u2014 '+n1+' & '+n2);
+  showBoardNotif('\uD83C\uDFC6 TEAM '+team+' WINS!',n1+' & '+n2,0);
 }
 
 
@@ -2500,15 +2570,57 @@ function renderChatMobile(mobileId, msgs){
   cont.scrollTop=cont.scrollHeight;
 }
 
-// Mirror players list to mobile panel — strip timer bars (shown at board corners)
+// Rebuild mobile player list with live event listeners (not cloned HTML)
+// innerHTML clone strips onclick handlers — resign vote buttons need real listeners
 function updPlayersMobile(){
   const mob=document.getElementById('mob-pl');
-  const src=document.getElementById('pl');
-  if(!mob||!src)return;
-  // Clone and remove timerbar divs to avoid duplicate IDs
-  const clone=src.cloneNode(true);
-  clone.querySelectorAll('.timerbar').forEach(el=>el.remove());
-  mob.innerHTML=clone.innerHTML;
+  if(!mob||!GS)return;
+  mob.innerHTML='';
+  const elim=GS.eliminated||[];
+  TURN_ORDER.forEach(color=>{
+    const p=GS.players?.[color];
+    const isElim=elim.includes(color);
+    const isActive=GS.currentTurn===color;
+    const row=document.createElement('div');row.className='pr';
+    const nameStr=p?.name?esc(p.name):'(waiting…)';
+    const elimStyle=isElim?'opacity:.4;text-decoration:line-through':'';
+    row.innerHTML=
+      '<div class="pd '+color+'"></div>'
+      +'<span class="pnl" style="'+elimStyle+'">'
+      +nameStr
+      +'<small style="color:#506080;margin-left:3px">⚔'+TEAMS[color]+'</small>'
+      +(isElim?'<small style="color:#e74c3c;margin-left:3px">out</small>':'')
+      +'</span>'
+      +'<span class="ps '+(isActive&&!isElim?'on':'')+'">'
+      +(isElim?'☠':isActive?'▶':p?.name?'●':'○')
+      +'</span>';
+    // Resign vote UI — build with real event listeners
+    const rv=GS.resignVotes&&GS.resignVotes[color]?GS.resignVotes[color]:null;
+    const myVote=rv?rv[myColor]:null;
+    if(rv&&color!==myColor&&!isElim&&!elim.includes(myColor)&&!GS.winner){
+      const others2=COLORS.filter(c=>!elim.includes(c)&&c!==color);
+      const yc=Object.entries(rv).filter(([k,v])=>k!=='requestedAt'&&k!==color&&v==='yes').length;
+      const vr=document.createElement('div');vr.className='resign-vote-row';
+      vr.innerHTML='<span class="resign-label">Resign? '+yc+'/'+Math.ceil(others2.length/2)+'</span>';
+      if(!myVote){
+        const ya=document.createElement('button');ya.className='rvbtn yes';ya.textContent='✔ Yes';
+        ya.addEventListener('click',()=>castResignVote(color,'yes'));  // real listener, not onclick
+        const na=document.createElement('button');na.className='rvbtn no';na.textContent='✘ No';
+        na.addEventListener('click',()=>castResignVote(color,'no'));
+        vr.appendChild(ya);vr.appendChild(na);
+      }else{
+        vr.innerHTML+='<span class="voted-label">You voted: '+myVote+'</span>';
+      }
+      row.appendChild(vr);
+    }else if(rv&&color===myColor&&!isElim){
+      const yc2=Object.entries(rv).filter(([k,v])=>k!=='requestedAt'&&k!==color&&v==='yes').length;
+      const nc2=Object.entries(rv).filter(([,v])=>v==='no').length;
+      const pr=document.createElement('span');pr.className='pending-resign';
+      pr.textContent='⌛ Resign: '+yc2+' yes / '+nc2+' no';
+      row.appendChild(pr);
+    }
+    mob.appendChild(row);
+  });
 }
 
 
