@@ -1393,9 +1393,9 @@ function fitCanvas(c){
   } else {
     // Board column = 1fr. Subtract btn-strip(44) + chat(290) + ad(20%) from viewport.
     const adW=window.innerWidth*0.20;
-    const availW=window.innerWidth-44-290-adW-16; // 16px safety margin
-    // Vertical: subtract corner rows (~32px each top+bot = 64) + ctrls(0, hidden) + small gaps
-    const availH=window.innerHeight-68;
+    const availW=window.innerWidth-44-290-adW-24; // 24px safety margin
+    // Vertical: two corner rows at 46px each = 92px, plus 20px padding/gaps
+    const availH=window.innerHeight-112;
     const sz=Math.max(260,Math.min(availW,availH));
     c.style.width=sz+'px'; c.style.height=sz+'px';
   }
