@@ -40,30 +40,50 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .btn:hover{background:linear-gradient(135deg,#b8860b,#d4a017);box-shadow:0 0 16px rgba(212,160,23,.4);transform:translateY(-1px)}
 #stat{text-align:center;font-style:italic;color:#b8860b;font-size:13px;min-height:18px}
 #gs{overflow:hidden;align-items:stretch}
-.gl{display:grid;grid-template-columns:1fr 310px 170px;width:100%;height:100vh}
+.gl{display:grid;grid-template-columns:1fr 44px 290px 20%;width:100%;height:100vh}
 .sp{background:rgba(4,9,20,.97);border-right:1px solid rgba(180,140,50,.14);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
 .rp{border-right:none;border-left:1px solid rgba(180,140,50,.14)}
 /* ── Desktop redesign (≥641px) ───────────────────────────────────── */
 @media(min-width:641px){
-  /* Hide old left team-chat panel — its content is mirrored to right panel */
+  /* Hide old left team-chat panel */
   #sp-left{display:none!important}
-  /* Ad column */
+  /* Hide old mobile controls — replaced by vertical btn-strip */
+  .ctrls{display:none!important}
+  .hnav{display:none!important}
+  /* ── Vertical button strip ──────────────────────────────── */
+  .btn-strip{background:rgba(4,9,20,.97);border-left:1px solid rgba(180,140,50,.1);border-right:1px solid rgba(180,140,50,.1);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:14px 0 10px;gap:7px;overflow:hidden}
+  .bs-btn{width:32px;height:32px;border-radius:7px;border:1px solid rgba(180,140,50,.25);background:rgba(180,140,50,.07);color:#d4a017;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;padding:0}
+  .bs-btn:hover:not(:disabled){background:rgba(180,140,50,.22);color:#ffe680;transform:scale(1.08)}
+  .bs-btn:disabled{opacity:.3;cursor:default}
+  .bs-btn.bs-danger{color:#e74c3c;border-color:rgba(231,76,60,.28)}
+  .bs-btn.bs-danger:hover{background:rgba(192,57,43,.22)!important;color:#ff8070!important}
+  .bs-btn.bs-live{color:#27ae60;border-color:rgba(39,174,96,.3);animation:none}
+  .bs-sep{width:24px;height:1px;background:rgba(180,140,50,.18);margin:3px 0;flex-shrink:0}
+  .bs-pos{font-family:'Cinzel',serif;font-size:8px;color:#506080;text-align:center;line-height:1;letter-spacing:.04em}
+  /* ── Player avatar circles ───────────────────────────────── */
+  .player-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:10px;font-weight:700;flex-shrink:0;border:2px solid;transition:box-shadow .2s}
+  .cn-name-text{font-family:'Cinzel',serif;font-size:9px;font-weight:700;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72px}
+  /* Override corner cells to row layout on desktop */
+  .corner-name-cell{flex-direction:row!important;gap:5px!important;align-items:center!important;padding:3px 7px!important;min-width:76px!important;justify-content:flex-start!important}
+  .corner-name-cell.active{box-shadow:0 0 0 2px #ffe680!important;animation:none!important}
+  /* ── Center timers in spacer ─────────────────────────────── */
+  .center-timers{display:flex;align-items:center;justify-content:center;gap:6px;flex:1;min-width:0}
+  .ct-pip{width:9px;height:9px;border-radius:50%;flex-shrink:0;opacity:.9}
+  .ct-time{font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:#c8d8e8;letter-spacing:.05em;min-width:40px;text-align:center;transition:color .3s}
+  .ct-time.low{color:#e74c3c;font-weight:700}
+  .ct-div{color:#304050;font-size:12px}
+  /* ── Ad column ───────────────────────────────────────────── */
   .ad-col{background:rgba(4,9,20,.97);border-left:1px solid rgba(180,140,50,.14);display:flex;flex-direction:column;align-items:center;padding:10px 6px;overflow:hidden;flex-shrink:0}
   .ad-col-label{font-family:'Cinzel',serif;font-size:8px;letter-spacing:.12em;color:#1e2a3a;text-transform:uppercase;margin:4px 0 8px;text-align:center}
   .ad-placeholder{width:calc(100% - 8px);flex:1;border:1px dashed rgba(180,140,50,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#1e2a3a;font-family:'Cinzel',serif;font-size:8px;letter-spacing:.1em;text-align:center}
-  /* Desktop chat tabs in right panel */
+  /* ── Desktop chat tabs ───────────────────────────────────── */
   .dktop-tabs{display:flex;border-bottom:1px solid rgba(180,140,50,.2);flex-shrink:0;background:rgba(6,12,26,.5)}
   .dktop-tab{flex:1;font-family:'Cinzel',serif;font-size:9px;font-weight:700;letter-spacing:.1em;padding:8px 4px;text-align:center;color:#506080;cursor:pointer;border:none;background:transparent;transition:color .15s;text-transform:uppercase}
   .dktop-tab.active{color:#d4a017;border-bottom:2px solid #d4a017}
   .dktop-tab:hover:not(.active){color:#9090a0}
   .dktop-panel{display:none;flex:1;flex-direction:column;min-height:0}
   .dktop-panel.active{display:flex}
-  /* Compact icon-only buttons for board controls */
-  .ctrls .rotbtn,.ctrls .actbtn{width:30px;min-width:30px;height:28px;padding:0;font-size:15px;display:flex;align-items:center;justify-content:center;border-radius:6px}
-  /* Thinner navigation bar */
-  .hnav{height:28px!important;gap:5px!important;padding:0 6px!important}
-  .hnbtn{padding:0 10px!important;height:22px!important;font-size:14px!important;font-weight:700!important;letter-spacing:0!important;min-width:28px;display:flex;align-items:center;justify-content:center}
-  /* Mic button in right panel */
+  /* Mic button */
   .rp-mic{margin-left:auto;flex-shrink:0}
 }
 .ph{display:flex;align-items:center;gap:8px;padding:11px 13px;background:rgba(180,140,50,.07);border-bottom:1px solid rgba(180,140,50,.13);font-family:'Cinzel',serif;font-size:10px;letter-spacing:.13em;font-weight:700;color:#d4a017;text-transform:uppercase;flex-shrink:0}
@@ -131,7 +151,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .tbfill.red,.tbfill.blue,.tbfill.green,.tbfill.gold{background:rgba(200,200,200,.45)}
 .tbfill.low{background:rgba(255,255,255,.65);animation:pu 0.5s ease infinite}
 .tbtime{min-width:34px;text-align:right;color:#a0b0c0;font-size:10px;font-weight:600;transition:color .3s}
-.tbtime.low{color:#e74c3c;animation:pu 0.6s ease infinite;font-weight:700}
+.tbtime.low{color:#e74c3c;font-weight:700}
 .actbtn{background:rgba(231,76,60,.12);border:1px solid rgba(231,76,60,.35);border-radius:6px;color:#e74c3c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.05em;padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;margin:2px}
 .actbtn:hover{background:rgba(231,76,60,.28);color:#ff8070}
 .kbtn{background:rgba(150,80,200,.12);border:1px solid rgba(150,80,200,.35);border-radius:6px;color:#c070f0;font-family:'Cinzel',serif;font-size:9px;padding:3px 7px;cursor:pointer;transition:all .15s;margin-left:auto;flex-shrink:0}
@@ -255,7 +275,6 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 }
 .corner-timer.low{
   color:#ffffff!important;font-weight:700;
-  animation:pu 0.5s ease infinite;
 }
 
 /* ── Mobile layout (≤640px) ─────────────────────────────────
@@ -440,9 +459,11 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 @media(min-width:641px){
   #mob-drawer{display:none!important}
   #mob-openbtn{display:none!important}
+  .btn-strip{display:flex}
 }
 @media(max-width:640px){
   #mob-openbtn{display:flex}
+  .btn-strip{display:none!important}
 }
 </style>
 </head>
@@ -524,7 +545,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div class="board-outer" id="board-outer">
      <div class="board-corner-row">
       <div class="corner-name-cell" id="cn-tl"></div>
-      <div class="corner-spacer"></div>
+      <div class="corner-spacer" id="cs-top"></div>
       <div class="corner-name-cell" id="cn-tr"></div>
      </div>
      <div class="bc" id="board-wrap">
@@ -539,7 +560,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      </div>
      <div class="board-corner-row">
       <div class="corner-name-cell" id="cn-bl"></div>
-      <div class="corner-spacer"></div>
+      <div class="corner-spacer" id="cs-bot"></div>
       <div class="corner-name-cell" id="cn-br"></div>
      </div>
      <div id="ad-space"></div>
@@ -551,6 +572,19 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <button class="hnbtn" id="hnext" disabled>&gt;</button>
      <button class="hnbtn hlive" id="hlive" style="display:none">&#9679;</button>
     </div>
+   </div><!-- end .cc2 -->
+
+   <!-- ── Vertical button strip (desktop only) ───────────── -->
+   <div class="btn-strip" id="btn-strip">
+    <button class="bs-btn" id="bsrotbtn" title="Rotate Board">&#8635;</button>
+    <button class="bs-btn" id="bsthemebtn" title="Board Theme">&#127914;</button>
+    <button class="bs-btn bs-danger" id="bsresbtn" title="Resign">&#127987;</button>
+    <button class="bs-btn" id="bspgndl" title="Download PGN">&#11015;</button>
+    <div class="bs-sep"></div>
+    <button class="bs-btn" id="bshprev" disabled title="Previous move">&#8249;</button>
+    <span class="bs-pos" id="bshpos">0/0</span>
+    <button class="bs-btn" id="bshnext" disabled title="Next move">&#8250;</button>
+    <button class="bs-btn bs-live" id="bshlive" style="display:none" title="Go Live">&#9679;</button>
    </div>
 
    <div class="sp rp" id="sp-right">
@@ -586,15 +620,10 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      </div>
     </div>
 
-    <!-- Move log + players always visible at bottom -->
-    <div class="gls" style="height:180px;flex-shrink:0">
+    <!-- Move log always visible at bottom -->
+    <div class="gls" style="height:160px;flex-shrink:0">
      <div class="stl">Move Log</div>
      <div id="ml" class="ml"></div>
-    </div>
-    <div class="pls" style="border-top:1px solid rgba(180,140,50,.1);flex-shrink:0">
-     <div class="stl">Players</div>
-     <div id="pl2"></div>
-     <div class="rid" id="rid2">Room: <span id="rs2">&#8212;</span></div>
     </div>
    </div>
 
@@ -1276,12 +1305,29 @@ function enterGame(){
   document.getElementById('themebtn').addEventListener('click',()=>{
     _boardThemeIdx=(_boardThemeIdx+1)%BOARD_THEMES.length;
     const name=BOARD_THEMES[_boardThemeIdx].name;
-    document.getElementById('themebtn').textContent=
-      ['&#127914;','&#127769;','&#9822;','&#128309;'][_boardThemeIdx];
+    const icons=['&#127914;','&#127769;','&#9822;','&#128309;'];
+    document.getElementById('themebtn').innerHTML=icons[_boardThemeIdx];
+    const bst=document.getElementById('bsthemebtn'); if(bst) bst.innerHTML=icons[_boardThemeIdx];
     paint();
     showToast('Board: '+name);
   });
   document.getElementById('pgndl').addEventListener('click',downloadPGN);
+  // Desktop btn-strip — proxy to existing handlers
+  document.getElementById('bsrotbtn')?.addEventListener('click',()=>document.getElementById('rotbtn').click());
+  document.getElementById('bsthemebtn')?.addEventListener('click',()=>{document.getElementById('themebtn').click();});
+  document.getElementById('bsresbtn')?.addEventListener('click',()=>document.getElementById('resbtn').click());
+  document.getElementById('bspgndl')?.addEventListener('click',downloadPGN);
+  document.getElementById('bshprev')?.addEventListener('click',()=>{
+    if(histIdx<0) histIdx=moveHistory.length-1;
+    else if(histIdx>0) histIdx--;
+    paint();
+  });
+  document.getElementById('bshnext')?.addEventListener('click',()=>{
+    if(histIdx>=0&&histIdx<moveHistory.length-1) histIdx++;
+    else histIdx=-1;
+    paint();
+  });
+  document.getElementById('bshlive')?.addEventListener('click',()=>{histIdx=-1;selSq=null;legals=[];paint();});
   // Desktop team-label badge
   const tld2=document.getElementById('tld2');
   if(tld2){tld2.textContent=TEAMS[myColor];tld2.style.color=TEAMS[myColor]==='A'?'#e05050':'#40b060';}
@@ -1350,14 +1396,61 @@ const PERSP_CORNERS={
   green:{tl:'gold',  tr:'red',   bl:'green',br:'blue'},
 };
 
+// Avatar style per color (background, text color, border)
+const AVATAR_STYLE={
+  red:  {bg:'#1a1a1a',txt:'#b8b8b8',bdr:'#484848'},
+  blue: {bg:'#c8e8f8',txt:'#1a3a4a',bdr:'#5a9ab8'},
+  green:{bg:'#8c0014',txt:'#ffb0bc',bdr:'#c01828'},
+  gold: {bg:'#7a4800',txt:'#ffd070',bdr:'#c07000'},
+};
+// Pip colors for center timer display
+const PIP_COLOR={red:'#484848',blue:'#c8e8f8',green:'#c01828',gold:'#e8900a'};
+
+function _buildCornerCell(cell, color, name, isElim, isActive){
+  const av=AVATAR_STYLE[color]||{bg:'#333',txt:'#fff',bdr:'#555'};
+  cell.className='corner-name-cell '+CORNER_CLASS[color]
+    +(isElim?' elim':'')
+    +(isActive&&!isElim?' active':'');
+  const initial=(name||'?')[0].toUpperCase();
+  cell.innerHTML=
+    '<div class="player-avatar" style="background:'+av.bg+';color:'+av.txt+';border-color:'+av.bdr+'">'
+    +initial+'</div>'
+    +'<span class="cn-name-text">'+(isElim?'<s>':'')+esc(name)+(isElim?'</s>':'')+'</span>';
+}
+
+function _buildCenterTimers(spacerEl, colorL, colorR, timers, ct, turnStartedAt, gameStarted, elim){
+  const TOTAL=300000;
+  const _t=(col)=>{
+    if(!gameStarted) return '5:00';
+    const base=timers[col]||TOTAL;
+    const used=(ct===col&&turnStartedAt)?Math.max(0,Date.now()-turnStartedAt):0;
+    return fmtTime(Math.max(0,base-used));
+  };
+  const elimL=elim.includes(colorL), elimR=elim.includes(colorR);
+  const rawL=gameStarted?(timers[colorL]||TOTAL):TOTAL;
+  const rawR=gameStarted?(timers[colorR]||TOTAL):TOTAL;
+  const usedL=(ct===colorL&&turnStartedAt)?Math.max(0,Date.now()-turnStartedAt):0;
+  const usedR=(ct===colorR&&turnStartedAt)?Math.max(0,Date.now()-turnStartedAt):0;
+  const leftL=Math.max(0,rawL-usedL), leftR=Math.max(0,rawR-usedR);
+  const lowL=leftL<30000&&!elimL, lowR=leftR<30000&&!elimR;
+  spacerEl.innerHTML=
+    '<div class="center-timers">'
+    +'<span class="ct-pip" style="background:'+PIP_COLOR[colorL]+'"></span>'
+    +'<span class="ct-time'+(lowL?' low':'')+'" id="cntmr-'+colorL+'">'+(elimL?'out':_t(colorL))+'</span>'
+    +'<span class="ct-div">&#183;</span>'
+    +'<span class="ct-time'+(lowR?' low':'')+'" id="cntmr-'+colorR+'">'+(elimR?'out':_t(colorR))+'</span>'
+    +'<span class="ct-pip" style="background:'+PIP_COLOR[colorR]+'"></span>'
+    +'</div>';
+}
+
 function updCornerNames(){
   if(!GS)return;
   const corners=PERSP_CORNERS[perspective]||PERSP_CORNERS.red;
   const elim=GS.eliminated||[];
-  const TOTAL=300000;
-  const raw=GS.timers||{};
+  const timers=GS.timers||{};
   const ct=GS.currentTurn;
-  const allCaptures=GS.captures||{};
+  const ts=GS.turnStartedAt;
+  const gs=GS.gameStarted;
 
   ['tl','tr','bl','br'].forEach(pos=>{
     const cell=document.getElementById('cn-'+pos);
@@ -1365,64 +1458,37 @@ function updCornerNames(){
     const color=corners[pos];
     const p=GS.players?.[color];
     const name=p?.name||(PIECE_COLORS[color]?.label||color);
-    const isElim=elim.includes(color);
-    const isActive=GS.currentTurn===color;
+    _buildCornerCell(cell, color, name, elim.includes(color), GS.currentTurn===color);
 
-    // Timer
-    let timeStr='5:00';
-    if(GS.gameStarted){
-      const base=raw[color]||TOTAL;
-      const used=(ct===color&&GS.turnStartedAt)?Math.max(0,Date.now()-GS.turnStartedAt):0;
-      const left=Math.max(0,base-used);
-      timeStr=fmtTime(left);
-    }
-
-    cell.className='corner-name-cell '+CORNER_CLASS[color]
-      +(isElim?' elim':'')
-      +(isActive&&!isElim?' active':'');
-
-    // Build HTML: name + timer
-    cell.innerHTML=
-      '<span>'+(isActive?'▶ ':'')+esc(name)+'</span>'
-      +'<span class="corner-timer" id="cntmr-'+color+'">'
-      +(isElim?'out':timeStr)+'</span>';
-
-    // Captured pieces — tiny canvases
-    const caps=allCaptures[color]
-      ? Object.values(allCaptures[color])
-      : [];
+    // Captured pieces (append after avatar+name)
+    const caps=(GS.captures||{})[color]?Object.values(GS.captures[color]):[];
     if(caps.length>0){
       const row=document.createElement('div');
       row.className='corner-captured';
-      // Sort: show most valuable first (Q R B N P)
       const order={Q:0,R:1,B:2,N:3,P:4,K:5};
-      const sorted=[...caps].sort((a,b)=>(order[a.type]||9)-(order[b.type]||9));
-      sorted.forEach(cap=>{
-        const sz=14; // tiny icon size px
+      [...caps].sort((a,b)=>(order[a.type]||9)-(order[b.type]||9)).forEach(cap=>{
+        const sz=13;
         const cv=document.createElement('canvas');
-        cv.width=sz; cv.height=sz;
+        cv.width=sz;cv.height=sz;
         cv.title=PIECE_COLORS[cap.color]?.label||cap.color;
         const ctx2=cv.getContext('2d');
-        // Draw immediately if cached, else try after short delay
         const tryDraw=()=>{
           const cached=_pieceImg[cap.type+'_'+cap.color];
-          if(cached){
-            ctx2.drawImage(cached,0,0,sz,sz);
-          } else {
-            ctx2.fillStyle=PIECE_COLORS[cap.color]?.fill||'#888';
-            ctx2.font=`bold ${sz*0.7}px serif`;
-            ctx2.textAlign='center'; ctx2.textBaseline='middle';
-            ctx2.fillText(cap.type, sz/2, sz/2);
-          }
+          if(cached){ctx2.drawImage(cached,0,0,sz,sz);}
+          else{ctx2.fillStyle=PIECE_COLORS[cap.color]?.fill||'#888';ctx2.font=`bold ${sz*0.7}px serif`;ctx2.textAlign='center';ctx2.textBaseline='middle';ctx2.fillText(cap.type,sz/2,sz/2);}
         };
-        tryDraw();
-        // Retry once after pieces load from CDN
-        setTimeout(tryDraw, 1200);
+        tryDraw();setTimeout(tryDraw,1200);
         row.appendChild(cv);
       });
       cell.appendChild(row);
     }
   });
+
+  // Center spacers — show timers for the two players on each row
+  const csTop=document.getElementById('cs-top');
+  const csBot=document.getElementById('cs-bot');
+  if(csTop) _buildCenterTimers(csTop,corners.tl,corners.tr,timers,ct,ts,gs,elim);
+  if(csBot) _buildCenterTimers(csBot,corners.bl,corners.br,timers,ct,ts,gs,elim);
 }
 
 // ── Click Handling ────────────────────────────────────────────────
@@ -1852,10 +1918,17 @@ function sysChat(text){
 function updHistButtons(){
   const tot=moveHistory.length;
   const live=histIdx<0;
-  document.getElementById('hprev').disabled=(histIdx===0||(live&&tot===0));
+  const prevDis=(histIdx===0||(live&&tot===0));
+  document.getElementById('hprev').disabled=prevDis;
   document.getElementById('hnext').disabled=live;
   document.getElementById('hlive').style.display=live?'none':'inline-block';
   document.getElementById('hpos').textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
+  // Sync btn-strip
+  const bp=document.getElementById('bshprev'); if(bp) bp.disabled=prevDis;
+  const bn=document.getElementById('bshnext'); if(bn) bn.disabled=live;
+  const bl=document.getElementById('bshlive'); if(bl) bl.style.display=live?'none':'flex';
+  const bpos=document.getElementById('bshpos');
+  if(bpos) bpos.textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
 }
 // -- Timer display
 function fmtTime(ms){
@@ -1887,9 +1960,9 @@ function updTimers(){
     el.querySelector('.tbfill').className='tbfill '+col+(low?' low':'');
     el.querySelector('.tbtime').textContent=fmtTime(left);
     el.querySelector('.tbtime').className='tbtime'+(low?' low':'');
-    // Also update corner name timer if present (mobile)
+    // Update corner name timer (cntmr- used in spacer on desktop, in corner cell on mobile)
     const ct2=document.getElementById('cntmr-'+col);
-    if(ct2){ ct2.textContent=fmtTime(left); ct2.className='corner-timer'+(low?' low':''); }
+    if(ct2){ ct2.textContent=fmtTime(left); ct2.className='ct-time'+(low?' low':''); }
   });
 }
 
@@ -2052,9 +2125,6 @@ function updPlayers(){
   });
   updTimers();
   updPlayersMobile();
-  // Mirror to desktop right-panel player list
-  const pl2=document.getElementById('pl2');
-  if(pl2) pl2.innerHTML=document.getElementById('pl').innerHTML;
 }
 
 function showBoardNotif(title,sub,ms){
