@@ -87,6 +87,15 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   .dktop-tab:hover:not(.active){color:#9090a0}
   .dktop-panel{display:none;flex:1;flex-direction:column;min-height:0}
   .dktop-panel.active{display:flex}
+  .bs-btn.bs-flip{color:#7ab8e8;border-color:rgba(100,170,220,.3);font-size:17px}
+  .bs-btn.bs-flip:hover{background:rgba(100,170,220,.18)!important;color:#b0d8f8!important}
+  .bs-btn.bs-flip.active{background:rgba(100,170,220,.22)!important;color:#b0d8f8;border-color:rgba(100,170,220,.55)}
+  /* Flipped layout: chat left, btn-strip, board right, ad stays rightmost */
+  .gl.flipped{grid-template-columns:290px 44px 1fr 20%}
+  .gl.flipped .cc2{order:3}
+  .gl.flipped .btn-strip{order:2;border-left:1px solid rgba(180,140,50,.1);border-right:1px solid rgba(180,140,50,.1)}
+  .gl.flipped #sp-right{order:1;border-left:none;border-right:1px solid rgba(180,140,50,.14)}
+  .gl.flipped .ad-col{order:4}
   /* Mic button */
   .rp-mic{margin-left:auto;flex-shrink:0}
 }
@@ -588,6 +597,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <button class="bs-btn" id="bsthemebtn" title="Board Theme">&#127914;</button>
     <button class="bs-btn bs-danger" id="bsresbtn" title="Resign">&#127987;</button>
     <button class="bs-btn" id="bspgndl" title="Download PGN">&#11015;</button>
+    <div class="bs-sep"></div>
+    <button class="bs-btn bs-flip" id="bsflip" title="Flip Layout">&#8644;</button>
     <div class="bs-sep"></div>
     <button class="bs-btn" id="bshprev" disabled title="Previous move">&#8249;</button>
     <span class="bs-pos" id="bshpos">0/0</span>
@@ -1325,6 +1336,15 @@ function enterGame(){
   document.getElementById('bsthemebtn')?.addEventListener('click',()=>{document.getElementById('themebtn').click();});
   document.getElementById('bsresbtn')?.addEventListener('click',()=>document.getElementById('resbtn').click());
   document.getElementById('bspgndl')?.addEventListener('click',downloadPGN);
+  // Flip layout button
+  document.getElementById('bsflip')?.addEventListener('click',()=>{
+    const gl=document.querySelector('.gl');
+    const btn=document.getElementById('bsflip');
+    gl.classList.toggle('flipped');
+    btn.classList.toggle('active');
+    // Recalc canvas size after reflow
+    setTimeout(()=>fitCanvas(document.getElementById('gc')),50);
+  });
   document.getElementById('bshprev')?.addEventListener('click',()=>{
     if(histIdx<0) histIdx=moveHistory.length-1;
     else if(histIdx>0) histIdx--;
