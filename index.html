@@ -612,6 +612,12 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
    </div>
 
    <div class="sp rp" id="sp-right">
+    <!-- Room ID strip -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;background:rgba(180,140,50,.06);border-bottom:1px solid rgba(180,140,50,.13);flex-shrink:0">
+     <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;color:#506080;text-transform:uppercase">Room</span>
+     <span id="rs-display" style="font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:#d4a017;letter-spacing:.14em">—</span>
+     <button id="rs-copy" title="Copy Room ID" style="background:none;border:none;cursor:pointer;color:#506080;font-size:12px;padding:0 2px;line-height:1;transition:color .15s" onmouseover="this.style.color='#d4a017'" onmouseout="this.style.color='#506080'">&#128203;</button>
+    </div>
     <!-- Desktop tab strip: Team | Public -->
     <div class="dktop-tabs" id="dktop-tabs">
      <button class="dktop-tab active" data-dpanel="dp-team">&#9876; Team</button>
@@ -1301,6 +1307,10 @@ function enterGame(){
   document.getElementById('tld').style.color=TEAMS[myColor]==='A'?'#e05050':'#40b060';
   document.getElementById('rs').textContent=roomId;
   const rs2=document.getElementById('rs2'); if(rs2) rs2.textContent=roomId;
+  const rsd=document.getElementById('rs-display'); if(rsd) rsd.textContent=roomId;
+  document.getElementById('rs-copy')?.addEventListener('click',()=>{
+    navigator.clipboard?.writeText(roomId).then(()=>showToast('✓ Room ID copied!')).catch(()=>showToast(roomId));
+  });
   const si=document.getElementById('si');
   si.textContent=myName+' ('+myColor+' · Team '+TEAMS[myColor]+')';si.style.opacity='1';
   si.style.color=({red:'#a0a0a0',blue:'#d0ccC4',green:'#90a8b8',gold:'#d49820'})[myColor];
