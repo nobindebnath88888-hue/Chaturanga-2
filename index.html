@@ -91,8 +91,21 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   .gl.flipped .btn-strip{order:2;border-left:1px solid rgba(180,140,50,.1);border-right:1px solid rgba(180,140,50,.1)}
   .gl.flipped #sp-right{order:1;border-left:none;border-right:1px solid rgba(180,140,50,.14)}
   .gl.flipped .ad-col{order:4}
-  /* Mic button */
-  .rp-mic{margin-left:auto;flex-shrink:0}
+  /* ── Chat drawer toggle ──────────────────────────────────── */
+  .chat-toggle-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:5px 10px;background:rgba(180,140,50,.07);border:none;border-bottom:1px solid rgba(180,140,50,.2);color:#d4a017;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;cursor:pointer;flex-shrink:0;transition:background .15s;text-transform:uppercase;position:relative}
+  .chat-toggle-btn:hover{background:rgba(180,140,50,.15)}
+  .chat-toggle-btn .ctb-icon{font-size:13px}
+  .chat-toggle-btn .ctb-label{flex:1;text-align:left}
+  .chat-toggle-btn .ctb-arrow{font-size:10px;transition:transform .25s}
+  .chat-toggle-btn.collapsed .ctb-arrow{transform:rotate(180deg)}
+  .chat-unread{background:#e74c3c;color:#fff;font-family:'Cinzel',serif;font-size:8px;font-weight:700;border-radius:100px;padding:1px 5px;min-width:16px;text-align:center;display:none}
+  .chat-unread.has-unread{display:inline-block}
+  /* Collapsible chat area */
+  .chat-collapsible{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;transition:flex .3s ease}
+  .chat-collapsible.collapsed{flex:0;min-height:0!important;overflow:hidden;pointer-events:none}
+  /* Move log expands when chat is collapsed */
+  .gls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;display:flex;flex-direction:column;gap:5px;flex-shrink:0;height:160px;transition:height .3s ease,flex .3s ease}
+  .gls.expanded{flex:1;height:auto!important;min-height:0}
 }
 .ph{display:flex;align-items:center;gap:8px;padding:11px 13px;background:rgba(180,140,50,.07);border-bottom:1px solid rgba(180,140,50,.13);font-family:'Cinzel',serif;font-size:10px;letter-spacing:.13em;font-weight:700;color:#d4a017;text-transform:uppercase;flex-shrink:0}
 .tbadge{margin-left:auto;background:rgba(255,255,255,.07);border-radius:100px;padding:2px 9px;font-size:9px}
@@ -140,10 +153,16 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .rotbtn{background:rgba(180,140,50,.1);border:1px solid rgba(180,140,50,.3);border-radius:7px;color:#d4a017;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.07em;padding:5px 10px;cursor:pointer;transition:all .15s}
 .rotbtn:hover{background:rgba(180,140,50,.22);color:#ffe680}
 .gls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;display:flex;flex-direction:column;gap:5px;height:160px;flex-shrink:0}
-.ml{overflow-y:auto;font-size:10px;color:#7080a0;display:flex;flex-direction:column;gap:2px;font-family:'Cinzel',serif}
+.ml{overflow-y:auto;font-size:10px;color:#7080a0;display:flex;flex-direction:column;gap:1px;font-family:'Cinzel',serif}
 .ml::-webkit-scrollbar{width:3px}
 .ml::-webkit-scrollbar-thumb{background:#1e3a6e;border-radius:2px}
-.le{padding:1px 0}.le.red{color:#909090}.le.blue{color:#a8d8f0}.le.green{color:#e04050}.le.gold{color:#e8900a}
+.le{padding:3px 6px;border-radius:4px;cursor:pointer;transition:background .12s,color .12s;user-select:none}
+.le:hover{background:rgba(180,140,50,.14);color:#e8d5a0}
+.le.active-move{background:rgba(180,140,50,.22);color:#ffe680;font-weight:700}
+.le.red{color:#909090}.le.red:hover,.le.red.active-move{color:#c0c0c0}
+.le.blue{color:#a8d8f0}.le.blue:hover,.le.blue.active-move{color:#d8f0ff}
+.le.green{color:#e04050}.le.green:hover,.le.green.active-move{color:#ff8090}
+.le.gold{color:#e8900a}.le.gold:hover,.le.gold.active-move{color:#ffc050}
 .legbox{border-top:1px solid rgba(180,140,50,.08);padding:6px 10px;flex-shrink:0}
 .legrow{font-family:'Cinzel',serif;font-size:9px;color:#506080;line-height:1.8}
 .turnorder{background:rgba(255,255,255,.03);border:1px solid rgba(180,140,50,.1);border-radius:6px;padding:6px 10px;margin:6px 10px;flex-shrink:0}
@@ -555,7 +574,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div class="ctrls">
      <div id="td">Waiting&hellip;</div>
      <button class="rotbtn" id="rotbtn" title="Rotate Board">&#8635;</button>
-     <button class="rotbtn" id="themebtn" title="Board Theme">&#127914;</button>
+     <button class="rotbtn" id="themebtn" title="Board Theme">&#127769;</button>
      <button class="actbtn" id="resbtn" title="Resign">&#127987;</button>
      <button class="rotbtn" id="pgndl" title="Download PGN">&#11015;</button>
     </div>
@@ -599,7 +618,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
    <!-- ── Vertical button strip (desktop only) ───────────── -->
    <div class="btn-strip" id="btn-strip">
     <button class="bs-btn" id="bsrotbtn" title="Rotate Board">&#8635;</button>
-    <button class="bs-btn" id="bsthemebtn" title="Board Theme">&#127914;</button>
+    <button class="bs-btn" id="bsthemebtn" title="Board Theme">&#127769;</button>
     <button class="bs-btn bs-danger" id="bsresbtn" title="Resign">&#127987;</button>
     <button class="bs-btn" id="bspgndl" title="Download PGN">&#11015;</button>
     <div class="bs-sep"></div>
@@ -618,40 +637,46 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <span id="rs-display" style="font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:#d4a017;letter-spacing:.14em">—</span>
      <button id="rs-copy" title="Copy Room ID" style="background:none;border:none;cursor:pointer;color:#506080;font-size:12px;padding:0 2px;line-height:1;transition:color .15s" onmouseover="this.style.color='#d4a017'" onmouseout="this.style.color='#506080'">&#128203;</button>
     </div>
-    <!-- Desktop tab strip: Team | Public -->
-    <div class="dktop-tabs" id="dktop-tabs">
-     <button class="dktop-tab active" data-dpanel="dp-team">&#9876; Team</button>
-     <button class="dktop-tab" data-dpanel="dp-public">&#128226; Public</button>
-    </div>
 
-    <!-- Team chat panel (desktop mirror) -->
-    <div class="dktop-panel active" id="dp-team">
-     <div class="ph" style="background:rgba(180,140,50,.05);border-bottom:1px solid rgba(180,140,50,.13)">
-      <span>&#128737;</span><span>TEAM CHAT</span>
-      <span style="margin-left:4px;font-size:9px;color:#506080">Team <span id="tld2"></span></span>
-      <button class="micbtn muted rp-mic" id="micbtn" onclick="toggleMic()" title="Toggle mic">&#127908;</button>
-     </div>
-     <div id="tcm-desk" class="cm" style="flex:1;min-height:0"></div>
-     <div class="cir">
-      <input type="text" id="tci-desk" placeholder="Message ally&hellip;" maxlength="200"/>
-      <button class="vtbtn" id="tvt-desk" title="Voice type">&#127908;</button>
-      <button id="tsb-desk" class="sb">&#10148;</button>
-     </div>
-    </div>
+    <!-- Chat drawer toggle button -->
+    <button class="chat-toggle-btn" id="chat-toggle">
+     <span class="ctb-icon">&#128172;</span>
+     <span class="ctb-label">Chat</span>
+     <span class="chat-unread" id="chat-unread-badge"></span>
+     <span class="ctb-arrow">&#9650;</span>
+    </button>
 
-    <!-- Public chat panel -->
-    <div class="dktop-panel" id="dp-public">
-     <div class="ph" style="background:rgba(180,140,50,.05);border-bottom:1px solid rgba(180,140,50,.13)"><span>&#128226;</span><span>PUBLIC CHAT</span></div>
-     <div id="pcm" class="cm" style="flex:1;min-height:0"></div>
-     <div class="cir">
-      <input type="text" id="pci" placeholder="Global message&hellip;" maxlength="200"/>
-      <button class="vtbtn" id="pvt" title="Voice type">&#127908;</button>
-      <button id="psb" class="sb">&#10148;</button>
+    <!-- Collapsible chat area -->
+    <div class="chat-collapsible" id="chat-collapsible">
+     <!-- Desktop tab strip: Team | Public -->
+     <div class="dktop-tabs" id="dktop-tabs">
+      <button class="dktop-tab active" data-dpanel="dp-team">&#9876; Team</button>
+      <button class="dktop-tab" data-dpanel="dp-public">&#128226; Public</button>
      </div>
-    </div>
 
-    <!-- Move log always visible at bottom -->
-    <div class="gls" style="height:160px;flex-shrink:0">
+     <!-- Team chat panel (desktop mirror) -->
+     <div class="dktop-panel active" id="dp-team">
+      <div id="tcm-desk" class="cm" style="flex:1;min-height:0"></div>
+      <div class="cir">
+       <input type="text" id="tci-desk" placeholder="Message ally&hellip;" maxlength="200"/>
+       <button class="vtbtn" id="tvt-desk" title="Voice type (click to speak)">&#127908;</button>
+       <button id="tsb-desk" class="sb">&#10148;</button>
+      </div>
+     </div>
+
+     <!-- Public chat panel -->
+     <div class="dktop-panel" id="dp-public">
+      <div id="pcm" class="cm" style="flex:1;min-height:0"></div>
+      <div class="cir">
+       <input type="text" id="pci" placeholder="Global message&hellip;" maxlength="200"/>
+       <button class="vtbtn" id="pvt" title="Voice type (click to speak)">&#127908;</button>
+       <button id="psb" class="sb">&#10148;</button>
+      </div>
+     </div>
+    </div><!-- end chat-collapsible -->
+
+    <!-- Move log — always visible, expands when chat is hidden -->
+    <div class="gls" id="desk-movelog">
      <div class="stl">Move Log</div>
      <div id="ml" class="ml"></div>
     </div>
@@ -788,7 +813,7 @@ const BOARD_THEMES = [
     coordDark: 'rgba(80,100,120,.75)',
   },
 ];
-let _boardThemeIdx = 0; // default: Glass
+let _boardThemeIdx = 1; // default: Forest
 
 // ── Board Setup ───────────────────────────────────────────────────
 // Pieces per player: R=Rook, N=Knight, B=Bishop, K=King, P=Pawn
@@ -1371,9 +1396,8 @@ function enterGame(){
     paint();
   });
   document.getElementById('bshlive')?.addEventListener('click',()=>{histIdx=-1;selSq=null;legals=[];paint();});
-  // Desktop team-label badge
-  const tld2=document.getElementById('tld2');
-  if(tld2){tld2.textContent=TEAMS[myColor];tld2.style.color=TEAMS[myColor]==='A'?'#e05050':'#40b060';}
+  // Desktop team-label badge (hidden panel, kept for compat)
+  const tld2=document.getElementById('tld2'); if(tld2){tld2.textContent=TEAMS[myColor];}
   // Desktop chat tab switching
   document.querySelectorAll('.dktop-tab').forEach(tab=>{
     tab.addEventListener('click',()=>{
@@ -1876,6 +1900,18 @@ function _updBadge(tab){
   const openBtn=document.getElementById('mob-openbtn');
   const total=_unread.tchat+_unread.pchat;
   if(openBtn) openBtn.textContent=total>0?'💬 '+total:'💬';
+  // Desktop chat drawer badge
+  const deskBadge=document.getElementById('chat-unread-badge');
+  if(deskBadge){
+    const collapsed=document.getElementById('chat-collapsible')?.classList.contains('collapsed');
+    if(collapsed&&total>0){
+      deskBadge.textContent=total>99?'99+':total;
+      deskBadge.classList.add('has-unread');
+    } else if(!collapsed||total===0){
+      deskBadge.textContent='';
+      deskBadge.classList.remove('has-unread');
+    }
+  }
 }
 
 function _markRead(tab){
@@ -1934,10 +1970,15 @@ function listenLog(){
     const log=document.getElementById('ml');log.innerHTML='';
     entries.forEach((e,i)=>{
       const d=document.createElement('div');
-      d.className='le '+e.color;
+      d.className='le '+e.color+(histIdx===i?' active-move':'');
       d.textContent=(i+1)+'. '+e.notation;
-      d.style.cursor='pointer';
-      d.addEventListener('click',()=>{ histIdx=i; paint(); });
+      d.setAttribute('data-idx',i);
+      d.addEventListener('click',()=>{
+        histIdx=i;
+        // Update active class on all entries
+        log.querySelectorAll('.le').forEach((el,j)=>el.classList.toggle('active-move',j===i));
+        paint();
+      });
       log.appendChild(d);
     });
     log.scrollTop=log.scrollHeight;
@@ -1981,6 +2022,19 @@ function sysChat(text){
       {system:true,text,ts:Date.now(),color:'system',name:'System'}));
 }
 
+function syncMoveLogActive(){
+  const log=document.getElementById('ml');
+  if(!log)return;
+  log.querySelectorAll('.le').forEach((el,j)=>{
+    el.classList.toggle('active-move',histIdx>=0&&j===histIdx);
+  });
+  // Scroll active entry into view
+  if(histIdx>=0){
+    const active=log.querySelector('.le.active-move');
+    if(active) active.scrollIntoView({block:'nearest'});
+  }
+}
+
 function updHistButtons(){
   const tot=moveHistory.length;
   const live=histIdx<0;
@@ -1995,6 +2049,7 @@ function updHistButtons(){
   const bl=document.getElementById('bshlive'); if(bl) bl.style.display=live?'none':'flex';
   const bpos=document.getElementById('bshpos');
   if(bpos) bpos.textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
+  syncMoveLogActive();
 }
 // -- Timer display
 function fmtTime(ms){
