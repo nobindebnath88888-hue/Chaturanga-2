@@ -91,21 +91,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   .gl.flipped .btn-strip{order:2;border-left:1px solid rgba(180,140,50,.1);border-right:1px solid rgba(180,140,50,.1)}
   .gl.flipped #sp-right{order:1;border-left:none;border-right:1px solid rgba(180,140,50,.14)}
   .gl.flipped .ad-col{order:4}
-  /* ── Chat drawer toggle ──────────────────────────────────── */
-  .chat-toggle-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:5px 10px;background:rgba(180,140,50,.07);border:none;border-bottom:1px solid rgba(180,140,50,.2);color:#d4a017;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;cursor:pointer;flex-shrink:0;transition:background .15s;text-transform:uppercase;position:relative}
-  .chat-toggle-btn:hover{background:rgba(180,140,50,.15)}
-  .chat-toggle-btn .ctb-icon{font-size:13px}
-  .chat-toggle-btn .ctb-label{flex:1;text-align:left}
-  .chat-toggle-btn .ctb-arrow{font-size:10px;transition:transform .25s}
-  .chat-toggle-btn.collapsed .ctb-arrow{transform:rotate(180deg)}
-  .chat-unread{background:#e74c3c;color:#fff;font-family:'Cinzel',serif;font-size:8px;font-weight:700;border-radius:100px;padding:1px 5px;min-width:16px;text-align:center;display:none}
-  .chat-unread.has-unread{display:inline-block}
-  /* Collapsible chat area */
-  .chat-collapsible{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;transition:flex .3s ease}
-  .chat-collapsible.collapsed{flex:0;min-height:0!important;overflow:hidden;pointer-events:none}
-  /* Move log expands when chat is collapsed */
-  .gls{border-top:1px solid rgba(180,140,50,.1);padding:8px 10px;display:flex;flex-direction:column;gap:5px;flex-shrink:0;height:160px;transition:height .3s ease,flex .3s ease}
-  .gls.expanded{flex:1;height:auto!important;min-height:0}
+
 }
 .ph{display:flex;align-items:center;gap:8px;padding:11px 13px;background:rgba(180,140,50,.07);border-bottom:1px solid rgba(180,140,50,.13);font-family:'Cinzel',serif;font-size:10px;letter-spacing:.13em;font-weight:700;color:#d4a017;text-transform:uppercase;flex-shrink:0}
 .tbadge{margin-left:auto;background:rgba(255,255,255,.07);border-radius:100px;padding:2px 9px;font-size:9px}
@@ -638,17 +624,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <button id="rs-copy" title="Copy Room ID" style="background:none;border:none;cursor:pointer;color:#506080;font-size:12px;padding:0 2px;line-height:1;transition:color .15s" onmouseover="this.style.color='#d4a017'" onmouseout="this.style.color='#506080'">&#128203;</button>
     </div>
 
-    <!-- Chat drawer toggle button -->
-    <button class="chat-toggle-btn" id="chat-toggle">
-     <span class="ctb-icon">&#128172;</span>
-     <span class="ctb-label">Chat</span>
-     <span class="chat-unread" id="chat-unread-badge"></span>
-     <span class="ctb-arrow">&#9650;</span>
-    </button>
-
-    <!-- Collapsible chat area -->
-    <div class="chat-collapsible" id="chat-collapsible">
-     <!-- Desktop tab strip: Team | Public -->
+    <!-- Desktop tab strip: Team | Public -->
      <div class="dktop-tabs" id="dktop-tabs">
       <button class="dktop-tab active" data-dpanel="dp-team">&#9876; Team</button>
       <button class="dktop-tab" data-dpanel="dp-public">&#128226; Public</button>
@@ -673,10 +649,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
        <button id="psb" class="sb">&#10148;</button>
       </div>
      </div>
-    </div><!-- end chat-collapsible -->
 
     <!-- Move log — always visible, expands when chat is hidden -->
-    <div class="gls" id="desk-movelog">
+    <div class="gls" >
      <div class="stl">Move Log</div>
      <div id="ml" class="ml"></div>
     </div>
@@ -1900,18 +1875,7 @@ function _updBadge(tab){
   const openBtn=document.getElementById('mob-openbtn');
   const total=_unread.tchat+_unread.pchat;
   if(openBtn) openBtn.textContent=total>0?'💬 '+total:'💬';
-  // Desktop chat drawer badge
-  const deskBadge=document.getElementById('chat-unread-badge');
-  if(deskBadge){
-    const collapsed=document.getElementById('chat-collapsible')?.classList.contains('collapsed');
-    if(collapsed&&total>0){
-      deskBadge.textContent=total>99?'99+':total;
-      deskBadge.classList.add('has-unread');
-    } else if(!collapsed||total===0){
-      deskBadge.textContent='';
-      deskBadge.classList.remove('has-unread');
-    }
-  }
+
 }
 
 function _markRead(tab){
