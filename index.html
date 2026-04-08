@@ -309,177 +309,253 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 @media(max-width:640px){
   html,body{overflow:hidden;height:100dvh;touch-action:manipulation}
 
-  /* Game screen: stack vertically, board on top */
+  /* ── Hide desktop-only panels ── */
+  .sp{display:none!important}
+  .btn-strip{display:none!important}
+
+  /* Game screen fills viewport */
   #gs{overflow:hidden!important}
   .gl{display:block!important;position:relative;width:100vw;height:100dvh}
 
-  /* Hide desktop side panels completely */
-  .sp{display:none!important}
-
-  /* Centre column: position relative so overlays anchor to it */
+  /* cc2: vertical flex filling full screen */
   .cc2{
     position:absolute!important;
     top:0;left:0;right:0;bottom:0;
     padding:0!important;margin:0!important;
-    display:block!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    overflow:hidden!important;
   }
 
-  /* Board outer: below top bar, names outside canvas top/bottom */
+  /* ── Board area: flex col, takes all space above ad ── */
   .board-outer{
-    position:absolute;
-    top:36px;           /* below top control bar */
-    left:0;right:0;
-    bottom:40px;        /* above bottom nav bar */
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
-    gap:0;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    flex:1!important;
+    min-height:0!important;
+    gap:0!important;
   }
-  /* Corner name rows — shown on mobile, compact */
+
+  /* Corner rows: full width, fixed height matching avatar */
   .board-corner-row{
     width:100%;
     display:flex!important;
     align-items:center;
     justify-content:space-between;
     padding:0 4px;
-    height:auto;
+    min-height:46px;
     flex-shrink:0;
+    position:relative;
   }
+
+  /* Corner cells: same as desktop — avatar + name outside */
   .corner-name-cell{
-    font-size:9px!important;
-    padding:1px 5px!important;
-    min-width:52px!important;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:0;
-    line-height:1.2;
+    background:none!important;border:none!important;
+    flex-direction:column!important;
+    gap:2px!important;
+    align-items:flex-start!important;
+    padding:2px 0 2px 50px!important;
+    min-width:0!important;
+    box-shadow:none!important;
+    justify-content:center!important;
   }
-
-  /* Hide ALL timerbars on mobile — corner cells show time text instead */
-  .timerbar{display:none!important}
-  /* Hide bottom corner row when drawer is open (it would peek above drawer) */
-  #mob-drawer.open ~ * .board-corner-row:last-of-type,
-  body.drawer-open .board-outer .board-corner-row:last-of-type{
-    opacity:0;pointer-events:none;
+  #cn-tr,#cn-br{
+    align-items:flex-end!important;
+    padding:2px 50px 2px 0!important;
+    text-align:right;
   }
-  .corner-spacer{flex:1}
+  .corner-name-cell.active .player-avatar{box-shadow:0 0 0 2px #ffe680!important}
+  /* Avatars same as desktop */
+  .player-avatar{width:38px;height:38px;border-radius:8px;font-size:14px}
+  .corner-avatar{width:38px;height:38px;border-radius:8px;font-size:14px}
+  .cn-name-text{max-width:70px;font-size:9px}
 
-  /* Canvas: square — leaves room for names above/below + ad space */
-  /* Total overhead: 36 top-bar + 22 top-names + 22 bot-names + 50 ad-space + 40 bot-bar = 170px */
+  /* Centre spacer timers */
+  .center-timers{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;min-width:0}
+  .ct-time{font-size:12px}
+
+  /* Board canvas: square, fills remaining space between two corner rows */
   #board-wrap{
-    position:relative!important;flex-shrink:0;
-    width:min(100vw, calc(100dvh - 170px));
-    height:min(100vw, calc(100dvh - 170px));
-  }
-  /* Ad space — sits below bottom corner row, takes remaining space */
-  #ad-space{
-    flex:1;
-    width:100%;
-    min-height:10px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    position:relative!important;
+    flex:1!important;
+    min-height:0!important;
+    width:100vw!important;
+    display:flex;align-items:center;justify-content:center;
   }
   #gc{
     display:block!important;
-    width:100%!important;
-    height:100%!important;
+    /* Square: constrained by both vw and available flex height */
+    width:min(100vw, calc(80dvh - 92px - 38px - var(--mob-btn-h,48px)))!important;
+    height:min(100vw, calc(80dvh - 92px - 38px - var(--mob-btn-h,48px)))!important;
     cursor:pointer;
     box-shadow:none!important;
   }
 
-  /* Hide identity labels */
-  #ot,#si{display:none!important}
+  /* Timerbars hidden on mobile (corner cells show timers) */
+  .timerbar{display:none!important}
 
-  /* ── Floating TOP bar: turn indicator ── */
-  .ctrls{
-    position:fixed;
-    top:0;left:0;right:0;
-    height:36px;
-    background:rgba(6,12,26,.45);
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
-    border-bottom:1px solid rgba(180,140,50,.25);
-    display:flex!important;
+  /* ── Mobile button row — horizontal strip ── */
+  .mob-btn-row{
+    display:flex;
     align-items:center;
     justify-content:center;
-    gap:6px;
-    padding:0 8px;
-    flex-wrap:nowrap!important;
-    margin:0!important;
-    z-index:50;
+    gap:7px;
+    padding:4px 8px;
+    background:rgba(6,12,26,.55);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    border-top:1px solid rgba(180,140,50,.18);
+    flex-shrink:0;
+    flex-wrap:nowrap;
   }
-  #td{font-size:11px;padding:2px 10px;flex:1;text-align:center;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rotbtn{font-size:10px;padding:2px 8px;flex-shrink:0}
-  .actbtn{font-size:10px;padding:2px 8px;flex-shrink:0}
+  .mob-btn-row .bs-btn{
+    width:34px;height:34px;border-radius:7px;
+    border:1px solid rgba(180,140,50,.25);
+    background:rgba(180,140,50,.07);
+    color:#d4a017;font-size:15px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .15s;flex-shrink:0;padding:0;
+  }
+  .mob-btn-row .bs-btn.bs-danger{color:#e74c3c;border-color:rgba(231,76,60,.28)}
+  .mob-btn-row .bs-btn.bs-draw{color:#27ae60;border-color:rgba(39,174,96,.28);font-size:18px;font-weight:700}
+  .mob-btn-row .bs-btn.bs-live{color:#27ae60}
+  .mob-btn-row .bs-sep{width:1px;height:22px;background:rgba(180,140,50,.22);flex-shrink:0}
+  .mob-btn-row .bs-pos{font-family:'Cinzel',serif;font-size:9px;color:#506080;min-width:28px;text-align:center}
+  /* Turn indicator inside button row */
+  .mob-turn-label{
+    font-family:'Cinzel',serif;font-size:10px;color:#d4a017;
+    flex:1;text-align:center;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;
+    letter-spacing:.06em;
+  }
 
-  /* ── Floating BOTTOM bar: prev/next + chat button ── */
-  .hnav{
-    position:fixed;
-    bottom:0;left:0;right:0;
-    height:40px;
-    background:rgba(6,12,26,.45);
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
-    border-top:1px solid rgba(180,140,50,.25);
-    display:flex!important;
+  /* ── Ad space: 20% of viewport height ── */
+  #ad-space{
+    width:100%;
+    height:20dvh;
+    flex-shrink:0;
+    display:flex;
     align-items:center;
     justify-content:center;
-    gap:6px;
-    padding:0 8px;
-    margin:0!important;
-    z-index:50;
+    background:rgba(4,9,20,.85);
+    border-top:1px solid rgba(180,140,50,.12);
   }
-  .hnbtn{font-size:10px;padding:3px 10px}
-  .hpos{font-size:10px}
+  .mob-ad-label{
+    font-family:'Cinzel',serif;font-size:8px;letter-spacing:.12em;
+    color:#1e2a3a;text-transform:uppercase;
+  }
 
-  /* Promotion modal: centred over board */
-  .pm{position:fixed!important;top:0;left:0;right:0;bottom:0;
-      z-index:200;border-radius:0}
+  /* ── Chat open FAB ── */
+  #mob-openbtn{
+    position:fixed;
+    z-index:120;
+    right:12px;
+    bottom:calc(20dvh + 10px);
+    width:44px;height:44px;border-radius:50%;
+    background:rgba(10,22,40,.88);
+    border:1px solid rgba(180,140,50,.5);
+    color:#d4a017;font-size:19px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,.6);
+    transition:transform .15s;
+  }
+  #mob-openbtn:active{transform:scale(.92)}
+  /* Unread count badge on FAB */
+  #mob-fab-badge{
+    position:absolute;top:-4px;right:-4px;
+    min-width:18px;height:18px;border-radius:9px;
+    background:#e74c3c;color:#fff;
+    font-family:'Cinzel',serif;font-size:9px;font-weight:700;
+    display:none;align-items:center;justify-content:center;
+    padding:0 3px;line-height:18px;
+  }
 
-  /* ── Mobile drawer — slides up from bottom (above hnav) ── */
+  /* ── Drawer: hovers over board, fully transparent bg ── */
   #mob-drawer{
-    position:fixed;bottom:40px;left:0;right:0;
-    background:transparent;
-    backdrop-filter:none;
-    -webkit-backdrop-filter:none;
-    border-top:1px solid rgba(180,140,50,.30);
-    border-radius:14px 14px 0 0;
-    z-index:100;
+    position:fixed;
+    left:0;right:0;
+    bottom:calc(20dvh);       /* sits above ad space */
+    max-height:72dvh;
+    /* Transparent so board shows through */
+    background:rgba(4,9,20,.18);
+    backdrop-filter:blur(18px) saturate(1.4);
+    -webkit-backdrop-filter:blur(18px) saturate(1.4);
+    border-top:1px solid rgba(180,140,50,.35);
+    border-radius:16px 16px 0 0;
+    z-index:110;
     transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.4,0,.2,1);
-    max-height:65dvh;
-    display:flex;flex-direction:column;
+    transition:transform .32s cubic-bezier(.4,0,.2,1);
+    display:flex!important;
+    flex-direction:column;
+    overflow:hidden;
   }
   #mob-drawer.open{transform:translateY(0)}
-  .mob-tabs{display:flex;flex-shrink:0;border-bottom:1px solid rgba(180,140,50,.20);background:transparent}
-  .mob-tab{flex:1;font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.08em;
-    padding:9px 4px 7px;text-align:center;color:#d0dde8;cursor:pointer;
-    border:none;background:transparent;transition:color .15s;text-shadow:0 1px 4px rgba(0,0,0,.9)}
-  .mob-tab.active{color:#ffe080;border-bottom:2px solid #ffe080;background:transparent;text-shadow:0 0 8px rgba(255,200,0,.6)}
-.mob-badge{display:inline-flex;align-items:center;justify-content:center;
-  min-width:16px;height:16px;border-radius:8px;padding:0 4px;
-  background:#e74c3c;color:#fff;font-size:9px;font-weight:700;
-  font-family:'Cinzel',serif;margin-left:4px;vertical-align:middle;line-height:16px}
-  .mob-handle{text-align:center;padding:6px 0 4px;color:#e8f0f8;font-size:13px;font-weight:700;
-    font-family:'Cinzel',serif;letter-spacing:.10em;cursor:pointer;flex-shrink:0;line-height:1;
-    background:transparent;text-shadow:0 1px 6px rgba(0,0,0,.95)}
-  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;background:transparent}
+
+  /* Handle */
+  .mob-handle{
+    text-align:center;padding:7px 0 5px;
+    color:#ffe680;font-size:13px;font-weight:700;
+    font-family:'Cinzel',serif;letter-spacing:.12em;
+    cursor:pointer;flex-shrink:0;line-height:1;
+    background:rgba(180,140,50,.08);
+    border-bottom:1px solid rgba(180,140,50,.15);
+    text-shadow:0 1px 8px rgba(0,0,0,.9);
+  }
+
+  /* Tabs */
+  .mob-tabs{
+    display:flex;flex-shrink:0;
+    border-bottom:1px solid rgba(180,140,50,.18);
+    background:rgba(6,12,26,.25);
+  }
+  .mob-tab{
+    flex:1;font-family:'Cinzel',serif;font-size:11px;font-weight:700;
+    letter-spacing:.08em;padding:8px 4px 6px;text-align:center;
+    color:rgba(200,216,232,.75);cursor:pointer;
+    border:none;background:transparent;transition:color .15s;
+    text-shadow:0 1px 6px rgba(0,0,0,.8);
+  }
+  .mob-tab.active{
+    color:#ffe080;border-bottom:2px solid #ffe080;
+    text-shadow:0 0 10px rgba(255,200,0,.7);
+  }
+  .mob-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:16px;height:16px;border-radius:8px;padding:0 4px;
+    background:#e74c3c;color:#fff;font-size:9px;font-weight:700;
+    font-family:'Cinzel',serif;margin-left:4px;vertical-align:middle;line-height:16px;
+  }
+
+  /* Panels: transparent background so board shows through */
+  .mob-panel{
+    display:none;flex:1;overflow-y:auto;
+    flex-direction:column;min-height:0;
+    background:transparent;
+  }
   .mob-panel.active{display:flex}
 
-  /* ── Chat open button (bottom-right above hnav) ── */
-  #mob-openbtn{
-    position:fixed;bottom:48px;right:10px;
-    width:40px;height:40px;border-radius:50%;
-    background:rgba(180,140,50,.22);
-    border:1px solid rgba(180,140,50,.45);
-    color:#d4a017;font-size:17px;cursor:pointer;
-    z-index:99;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 3px 12px rgba(0,0,0,.55);
-  }
+  /* Chat messages readable on transparent bg */
+  .msg.me{background:rgba(140,100,10,.75)!important}
+  .msg.ot{background:rgba(10,20,50,.72)!important}
+  .msg.sy{background:rgba(6,12,26,.55)!important}
+  .mt{text-shadow:0 1px 4px rgba(0,0,0,.9)}
+  .ma{text-shadow:0 1px 3px rgba(0,0,0,.8)}
+
+  /* Chat input row on transparent bg */
+  .cir{background:rgba(6,12,26,.55)!important;
+       backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+  /* Promotion modal */
+  .pm{position:fixed!important;top:0;left:0;right:0;bottom:0;z-index:200;border-radius:0}
+
+  /* Hide old top ctrls and bottom hnav — replaced by mob-btn-row */
+  .ctrls{display:none!important}
+  .hnav{display:none!important}
+  #ot,#si{display:none!important}
 }
 @media(min-width:641px){
   #mob-drawer{display:none!important}
@@ -593,9 +669,24 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
       <div class="corner-name-cell" id="cn-br"></div>
       <div class="corner-avatar ca-right" id="av-br"></div>
      </div>
-     <div id="ad-space"></div>
+     <div id="ad-space"><span class="mob-ad-label">Advertisement</span></div>
     </div>
     <div id="si" class="bi" style="opacity:0">&#183;</div>
+    <!-- Mobile button row (hidden on desktop via .btn-strip rule) -->
+    <div class="mob-btn-row" id="mob-btn-row">
+     <span class="mob-turn-label" id="mob-td">Waiting…</span>
+     <div class="bs-sep"></div>
+     <button class="bs-btn" id="mb-rotbtn" title="Rotate">&#8635;</button>
+     <button class="bs-btn" id="mb-themebtn" title="Theme">&#127769;</button>
+     <button class="bs-btn bs-danger" id="mb-resbtn" title="Resign">&#127987;</button>
+     <button class="bs-btn bs-draw" id="mb-drawbtn" title="Draw">&#189;</button>
+     <button class="bs-btn" id="mb-pgndl" title="PGN">&#11015;</button>
+     <div class="bs-sep"></div>
+     <button class="bs-btn" id="mb-hprev" disabled title="Prev">&#8249;</button>
+     <span class="bs-pos" id="mb-hpos">0/0</span>
+     <button class="bs-btn" id="mb-hnext" disabled title="Next">&#8250;</button>
+     <button class="bs-btn bs-live" id="mb-hlive" style="display:none" title="Live">&#9679;</button>
+    </div>
     <div class="hnav">
      <button class="hnbtn" id="hprev" disabled>&lt;</button>
      <span class="hpos" id="hpos">0/0</span>
@@ -670,11 +761,12 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
  </div>
 
 <!-- Mobile drawer: chat + players, slides up from bottom -->
-<div id="mob-drawer" style="display:none">
-  <div class="mob-handle" id="mob-handle">▲ CHAT</div>
+<div id="mob-drawer">
+  <div class="mob-handle" id="mob-handle">▼ CLOSE</div>
   <div class="mob-tabs">
     <button class="mob-tab active" data-tab="tchat">&#128737; Team<span class="mob-badge" id="badge-tchat" style="display:none"></span></button>
     <button class="mob-tab" data-tab="pchat">&#128226; Public<span class="mob-badge" id="badge-pchat" style="display:none"></span></button>
+    <button class="mob-tab" data-tab="movelog">&#9822; Log</button>
     <button class="mob-tab" data-tab="players">&#9812; Players</button>
   </div>
   <!-- Team chat panel -->
@@ -695,12 +787,19 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
       <button id="mob-psb" class="sb">&#10148;</button>
     </div>
   </div>
+  <!-- Move log panel -->
+  <div class="mob-panel" id="mob-movelog" style="overflow-y:auto;padding:8px">
+    <div id="mob-ml" class="ml"></div>
+  </div>
   <!-- Players panel -->
-  <div class="mob-panel" id="mob-players" style="padding:8px">
+  <div class="mob-panel" id="mob-players" style="padding:8px;overflow-y:auto">
     <div id="mob-pl"></div>
   </div>
 </div>
-<button id="mob-openbtn" title="Chat &amp; Players" style="display:none">💬</button>
+<!-- FAB chat button with unread badge -->
+<button id="mob-openbtn" title="Chat &amp; Players" style="display:none">
+  💬<span id="mob-fab-badge"></span>
+</button>
 <canvas id="drag-piece" width="80" height="80"></canvas>
 
 </div>
@@ -1376,6 +1475,25 @@ function enterGame(){
     paint();
   });
   document.getElementById('bshlive')?.addEventListener('click',()=>{histIdx=-1;selSq=null;legals=[];paint();});
+  // Mobile button row
+  document.getElementById('mb-rotbtn')?.addEventListener('click',()=>{
+    const i=COLORS.indexOf(perspective);perspective=COLORS[(i+1)%4];
+    selSq=null;legals=[];paint();
+  });
+  document.getElementById('mb-themebtn')?.addEventListener('click',()=>document.getElementById('themebtn').click());
+  document.getElementById('mb-resbtn')?.addEventListener('click',()=>document.getElementById('resbtn').click());
+  document.getElementById('mb-drawbtn')?.addEventListener('click',()=>document.getElementById('drawbtn').click());
+  document.getElementById('mb-pgndl')?.addEventListener('click',downloadPGN);
+  document.getElementById('mb-hprev')?.addEventListener('click',()=>{
+    if(histIdx<0) histIdx=moveHistory.length-1;
+    else if(histIdx>0) histIdx--;
+    paint();
+  });
+  document.getElementById('mb-hnext')?.addEventListener('click',()=>{
+    if(histIdx>=0&&histIdx<moveHistory.length-1) histIdx++;
+    else histIdx=-1;paint();
+  });
+  document.getElementById('mb-hlive')?.addEventListener('click',()=>{histIdx=-1;selSq=null;legals=[];paint();});
   // Desktop team-label badge (hidden panel, kept for compat)
   const tld2=document.getElementById('tld2'); if(tld2){tld2.textContent=TEAMS[myColor];}
   // Desktop chat tab switching
@@ -1398,7 +1516,7 @@ function enterGame(){
   const md=document.getElementById('mob-drawer');
   const mb=document.getElementById('mob-openbtn');
   if(md) md.style.display='';
-  if(mb&&window.innerWidth<=640) mb.style.display='flex';
+  if(mb&&window.innerWidth<=640){mb.style.display='flex';}
 }
 
 function fitCanvas(c){
@@ -1881,7 +1999,18 @@ function _updBadge(tab){
   // Also flash the open button if drawer is closed
   const openBtn=document.getElementById('mob-openbtn');
   const total=_unread.tchat+_unread.pchat;
-  if(openBtn) openBtn.textContent=total>0?'💬 '+total:'💬';
+  const fab=document.getElementById('mob-fab-badge');
+  if(openBtn){
+    openBtn.childNodes[0].textContent='💬';
+  }
+  if(fab){
+    if(total>0){
+      fab.textContent=total>99?'99+':total;
+      fab.style.display='inline-flex';
+    }else{
+      fab.style.display='none';
+    }
+  }
 
 }
 
@@ -1939,20 +2068,36 @@ function listenLog(){
     }));
     // Render log list
     const log=document.getElementById('ml');log.innerHTML='';
+    const mobLog=document.getElementById('mob-ml');if(mobLog)mobLog.innerHTML='';
     entries.forEach((e,i)=>{
-      const d=document.createElement('div');
-      d.className='le '+e.color+(histIdx===i?' active-move':'');
-      d.textContent=(i+1)+'. '+e.notation;
-      d.setAttribute('data-idx',i);
+      const makeEntry=()=>{
+        const d=document.createElement('div');
+        d.className='le '+e.color+(histIdx===i?' active-move':'');
+        d.textContent=(i+1)+'. '+e.notation;
+        d.setAttribute('data-idx',i);
+        return d;
+      };
+      const d=makeEntry();
       d.addEventListener('click',()=>{
         histIdx=i;
-        // Update active class on all entries
         log.querySelectorAll('.le').forEach((el,j)=>el.classList.toggle('active-move',j===i));
+        if(mobLog) mobLog.querySelectorAll('.le').forEach((el,j)=>el.classList.toggle('active-move',j===i));
         paint();
       });
       log.appendChild(d);
+      if(mobLog){
+        const dm=makeEntry();
+        dm.addEventListener('click',()=>{
+          histIdx=i;
+          log.querySelectorAll('.le').forEach((el,j)=>el.classList.toggle('active-move',j===i));
+          mobLog.querySelectorAll('.le').forEach((el,j)=>el.classList.toggle('active-move',j===i));
+          paint();
+        });
+        mobLog.appendChild(dm);
+      }
     });
     log.scrollTop=log.scrollHeight;
+    if(mobLog) mobLog.scrollTop=mobLog.scrollHeight;
     updHistButtons();
   });
 }
@@ -2020,6 +2165,11 @@ function updHistButtons(){
   const bl=document.getElementById('bshlive'); if(bl) bl.style.display=live?'none':'flex';
   const bpos=document.getElementById('bshpos');
   if(bpos) bpos.textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
+  // Mobile row
+  const mbp=document.getElementById('mb-hprev'); if(mbp) mbp.disabled=prevDis;
+  const mbn=document.getElementById('mb-hnext'); if(mbn) mbn.disabled=live;
+  const mbl=document.getElementById('mb-hlive'); if(mbl) mbl.style.display=live?'none':'flex';
+  const mbpos=document.getElementById('mb-hpos'); if(mbpos) mbpos.textContent=live?(tot>0?tot+'/'+tot:'0/0'):(histIdx+1)+'/'+tot;
   syncMoveLogActive();
 }
 // -- Timer display
@@ -2214,10 +2364,17 @@ function showConfirm(msg,yesLabel,onYes){
 function updTurn(){
   if(!GS)return;
   const ct=GS.currentTurn;const el=document.getElementById('td');
-  if(!ct){el.textContent='Game Over';return;}
+  const mEl=document.getElementById('mob-td');
+  if(!ct){
+    if(el) el.textContent='Game Over';
+    if(mEl) mEl.textContent='Game Over';
+    return;
+  }
   const n=GS.players?.[ct]?.name||ct;
-  el.textContent=ct===myColor?'\u26a1 YOUR TURN':n+"'s turn";
-  el.style.color=ct===myColor?'#ffe680':'#7080a0';
+  const txt=ct===myColor?'\u26a1 YOUR TURN':n+"'s turn";
+  const clr=ct===myColor?'#ffe680':'#7080a0';
+  if(el){el.textContent=txt;el.style.color=clr;}
+  if(mEl){mEl.textContent=txt;mEl.style.color=clr;}
 }
 
 function updPlayers(){
@@ -2852,38 +3009,35 @@ function setupMobileDrawer(){
   const openBtn=document.getElementById('mob-openbtn');
   if(!drawer)return;
 
-  // Toggle drawer open/close
-  const toggleDrawer=()=>{
-    drawer.classList.toggle('open');
-    handle.textContent=drawer.classList.contains('open')?'▼ CLOSE':'▲ CHAT';
-    // Hide bottom corner row when drawer open so names don't float above it
-    const rows=document.querySelectorAll('.board-corner-row');
-    const lastRow=rows[rows.length-1];
-    if(lastRow) lastRow.style.opacity=drawer.classList.contains('open')?'0':'1';
+  const closeDrawer=()=>{
+    drawer.classList.remove('open');
+    handle.textContent='▼ CLOSE';
   };
-  handle.addEventListener('click',toggleDrawer);
-  openBtn?.addEventListener('click',()=>{
+  const openDrawer=()=>{
     drawer.classList.add('open');
     handle.textContent='▼ CLOSE';
-    const rows=document.querySelectorAll('.board-corner-row');
-    const lastRow=rows[rows.length-1];
-    if(lastRow) lastRow.style.opacity='0';
-  });
+  };
+  const toggleDrawer=()=>{
+    drawer.classList.contains('open')?closeDrawer():openDrawer();
+  };
 
-  // Tab switching
+  handle.addEventListener('click',toggleDrawer);
+  openBtn?.addEventListener('click',openDrawer);
+
+  // Tab switching — including new movelog tab
   document.querySelectorAll('.mob-tab').forEach(tab=>{
     tab.addEventListener('click',()=>{
       document.querySelectorAll('.mob-tab').forEach(t=>t.classList.remove('active'));
       document.querySelectorAll('.mob-panel').forEach(p=>p.classList.remove('active'));
       tab.classList.add('active');
-      document.getElementById('mob-'+tab.dataset.tab)?.classList.add('active');
-      // Clear unread badge for this tab
+      const panelId='mob-'+tab.dataset.tab;
+      document.getElementById(panelId)?.classList.add('active');
       const t=tab.dataset.tab;
       if(t==='tchat'||t==='pchat') _markRead(t);
     });
   });
 
-  // Wire mobile chat inputs — mirror to the actual Firebase send functions
+  // Wire mobile chat inputs
   const wireInput=(inpId,btnId,ch)=>{
     const inp=document.getElementById(inpId);
     const btn=document.getElementById(btnId);
