@@ -57,6 +57,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   .bs-btn:disabled{opacity:.3;cursor:default}
   .bs-btn.bs-danger{color:#e74c3c;border-color:rgba(231,76,60,.28)}
   .bs-btn.bs-danger:hover{background:rgba(192,57,43,.22)!important;color:#ff8070!important}
+  .bs-btn.bs-draw{color:#27ae60;border-color:rgba(39,174,96,.28);font-size:18px;font-weight:700}
+  .bs-btn.bs-draw:hover{background:rgba(39,174,96,.18)!important;color:#2ecc71!important}
   .bs-btn.bs-live{color:#27ae60;border-color:rgba(39,174,96,.3);animation:none}
   .bs-sep{width:24px;height:1px;background:rgba(180,140,50,.18);margin:3px 0;flex-shrink:0}
   .bs-pos{font-family:'Cinzel',serif;font-size:8px;color:#506080;text-align:center;line-height:1;letter-spacing:.04em}
@@ -562,6 +564,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <button class="rotbtn" id="rotbtn" title="Rotate Board">&#8635;</button>
      <button class="rotbtn" id="themebtn" title="Board Theme">&#127769;</button>
      <button class="actbtn" id="resbtn" title="Resign">&#127987;</button>
+     <button class="actbtn" id="drawbtn" title="Offer Draw" style="display:none">&#189;</button>
      <button class="rotbtn" id="pgndl" title="Download PGN">&#11015;</button>
     </div>
     <div id="ot" class="bi" style="opacity:0">&#183;</div>
@@ -606,6 +609,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <button class="bs-btn" id="bsrotbtn" title="Rotate Board">&#8635;</button>
     <button class="bs-btn" id="bsthemebtn" title="Board Theme">&#127769;</button>
     <button class="bs-btn bs-danger" id="bsresbtn" title="Resign">&#127987;</button>
+    <button class="bs-btn bs-draw" id="bsdrawbtn" title="Offer Draw">&#189;</button>
     <button class="bs-btn" id="bspgndl" title="Download PGN">&#11015;</button>
     <div class="bs-sep"></div>
     <button class="bs-btn bs-flip" id="bsflip" title="Flip Layout">&#8644;</button>
@@ -1350,6 +1354,7 @@ function enterGame(){
   document.getElementById('bsrotbtn')?.addEventListener('click',()=>document.getElementById('rotbtn').click());
   document.getElementById('bsthemebtn')?.addEventListener('click',()=>{document.getElementById('themebtn').click();});
   document.getElementById('bsresbtn')?.addEventListener('click',()=>document.getElementById('resbtn').click());
+  document.getElementById('bsdrawbtn')?.addEventListener('click',()=>document.getElementById('drawbtn').click());
   document.getElementById('bspgndl')?.addEventListener('click',downloadPGN);
   // Flip layout button
   document.getElementById('bsflip')?.addEventListener('click',()=>{
@@ -1384,6 +1389,7 @@ function enterGame(){
   });
   initPieces(); // load + tint real SVG pieces from CDN
   setupResign();
+  setupDraw();
   listenGame();listenChats();listenLog();
   SFX.join();
   setupVoiceTyping();
@@ -1757,6 +1763,7 @@ function listenGame(){
     }
     // Check if kick vote passed for anyone
     checkResignVotes();
+    checkDrawVotes();
     paint();updPlayers();updTurn();
     startTimerTick();
     resetInactivityWatch();
@@ -2107,6 +2114,66 @@ async function castResignVote(requester,vote){
   await update(ref(db2,`rooms/${roomId}/resignVotes/${requester}`),{[myColor]:vote});
 }
 
+// ── Draw Offer System ─────────────────────────────────────────────
+// Any player proposes a draw → ALL active players must vote YES → game ends in draw
+function setupDraw(){
+  document.getElementById('drawbtn').addEventListener('click',()=>{
+    if(!GS||GS.winner)return;
+    const elim=GS.eliminated||[];
+    if(elim.includes(myColor))return;
+    if(GS.drawVotes&&GS.drawVotes[myColor]){
+      showToast('Your draw offer is already pending.');return;
+    }
+    showConfirm('Offer a draw? All active players must agree.',
+      'Offer Draw',async()=>{
+        await set(ref(db2,`rooms/${roomId}/drawVotes/${myColor}`),
+          {[myColor]:'yes',requestedAt:Date.now()});
+        sysChat((GS.players?.[myColor]?.name||myColor)+' offers a draw. Vote in the player list!');
+      });
+  });
+}
+
+async function checkDrawVotes(){
+  if(!GS||!GS.drawVotes)return;
+  const elim=GS.eliminated||[];
+  const active=COLORS.filter(c=>!elim.includes(c));
+  for(const [requester,votes] of Object.entries(GS.drawVotes||{})){
+    if(elim.includes(requester)){
+      await remove(ref(db2,`rooms/${roomId}/drawVotes/${requester}`));continue;
+    }
+    const vlist=Object.entries(votes||{}).filter(([k])=>k!=='requestedAt');
+    const noVotes=vlist.filter(([,v])=>v==='no').length;
+    const yesVotes=vlist.filter(([,v])=>v==='yes').length;
+    if(noVotes>0){
+      await remove(ref(db2,`rooms/${roomId}/drawVotes/${requester}`));
+      sysChat((GS.players?.[requester]?.name||requester)+"'s draw offer was declined.");
+      showToast('Draw declined.');
+      return;
+    }
+    // Draw passes when ALL active players have voted yes
+    if(yesVotes>=active.length){
+      await remove(ref(db2,`rooms/${roomId}/drawVotes/${requester}`));
+      await update(ref(db2,`rooms/${roomId}`),{winner:'draw',currentTurn:null});
+      sysChat('🤝 The game is a draw by agreement!');
+      showDraw();
+      return;
+    }
+  }
+}
+
+async function castDrawVote(requester,vote){
+  if(!GS||!roomId)return;
+  await update(ref(db2,`rooms/${roomId}/drawVotes/${requester}`),{[myColor]:vote});
+}
+
+function showDraw(){
+  SFX.victory();
+  const el=document.getElementById('td');
+  el.textContent='🤝 DRAW BY AGREEMENT';
+  el.style.color='#ffe680';el.style.fontSize='14px';
+  showBoardNotif('🤝 Draw','All players agreed to a draw',5000);
+}
+
 function showToast(msg){
   let t=document.getElementById('_toast');
   if(!t){t=document.createElement('div');t.id='_toast';t.className='toast';document.body.appendChild(t);}
@@ -2199,6 +2266,27 @@ function updPlayers(){
       const pr=document.createElement('span');pr.className='pending-resign';
       pr.textContent='\u231B Resign: '+yc2+' yes / '+nc2+' no';
       row.appendChild(pr);
+    }
+    // Draw vote UI
+    const dv=GS.drawVotes&&GS.drawVotes[color]?GS.drawVotes[color]:null;
+    const myDrawVote=dv?dv[myColor]:null;
+    if(dv&&!isElim&&!GS.winner){
+      const active2=COLORS.filter(c=>!elim.includes(c));
+      const dyc=Object.entries(dv).filter(([k,v])=>k!=='requestedAt'&&v==='yes').length;
+      const dvr=document.createElement('div');dvr.className='resign-vote-row';
+      dvr.innerHTML='<span class="resign-label" style="color:#27ae60">\u00BD Draw? '+dyc+'/'+active2.length+'</span>';
+      if(color!==myColor&&!elim.includes(myColor)&&!myDrawVote){
+        const dya=document.createElement('button');dya.className='rvbtn yes';dya.textContent='\u2714 Yes';
+        dya.onclick=()=>castDrawVote(color,'yes');
+        const dna=document.createElement('button');dna.className='rvbtn no';dna.textContent='\u2718 No';
+        dna.onclick=()=>castDrawVote(color,'no');
+        dvr.appendChild(dya);dvr.appendChild(dna);
+      }else if(myDrawVote){
+        dvr.innerHTML+='<span class="voted-label">You voted: '+myDrawVote+'</span>';
+      }else if(color===myColor){
+        dvr.innerHTML+='<span class="voted-label">Waiting for votes\u2026</span>';
+      }
+      row.appendChild(dvr);
     }
     cont.appendChild(row);
     if(!isElim){
