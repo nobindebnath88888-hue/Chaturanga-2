@@ -334,7 +334,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     overflow:hidden!important;
   }
 
-  /* board-outer fills all space above buttons */
+  /* board-outer: zero gap so no space between corner rows and board */
   .board-outer{
     display:flex!important;
     flex-direction:column!important;
@@ -482,8 +482,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   #mob-drawer{
     position:fixed;
     left:0;right:0;
-    bottom:20dvh;
-    /* Max = screen above ad minus button row = 80dvh - 44px, leave 10px gap */
+    /* Sits just above the button row and ad — button row is 44px, ad is 20dvh */
+    bottom:calc(20dvh + 44px);
+    /* Max height = space between top of btn row and top of screen, minus buffer */
     max-height:calc(80dvh - 54px);
     background:rgba(6,12,26,.15);
     backdrop-filter:blur(20px) saturate(1.6);
@@ -494,10 +495,12 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     z-index:115;
     transform:translateY(100%);
     transition:transform .3s cubic-bezier(.4,0,.2,1);
-    display:flex!important;
+    /* Hidden until JS adds .ready after game joins */
+    display:none;
     flex-direction:column;
     overflow:hidden;
   }
+  #mob-drawer.ready{display:flex}
   #mob-drawer.open{transform:translateY(0)}
 
   .mob-handle{
@@ -750,7 +753,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 
 <!-- Mobile drawer: chat + players, slides up from bottom -->
 <div id="mob-drawer">
-  <div class="mob-handle" id="mob-handle">▼ CLOSE</div>
+  <div class="mob-handle" id="mob-handle">▲ CHAT</div>
   <div class="mob-tabs">
     <button class="mob-tab active" data-tab="tchat">&#128737; Team<span class="mob-badge" id="badge-tchat" style="display:none"></span></button>
     <button class="mob-tab" data-tab="pchat">&#128226; Public<span class="mob-badge" id="badge-pchat" style="display:none"></span></button>
@@ -1500,10 +1503,8 @@ function enterGame(){
   SFX.join();
   setupVoiceTyping();
   setupMobileDrawer();
-  // Show mobile chat elements only after entering game
-  const md=document.getElementById('mob-drawer');
+  // Show FAB only after joining; drawer stays off-screen (transform) until opened
   const mb=document.getElementById('mob-openbtn');
-  if(md) md.style.display='';
   if(mb&&window.innerWidth<=640){mb.style.display='flex';}
 }
 
@@ -3001,7 +3002,7 @@ function setupMobileDrawer(){
 
   const closeDrawer=()=>{
     drawer.classList.remove('open');
-    handle.textContent='▼ CLOSE';
+    handle.textContent='▲ CHAT';
   };
   const openDrawer=()=>{
     drawer.classList.add('open');
@@ -3010,6 +3011,11 @@ function setupMobileDrawer(){
   const toggleDrawer=()=>{
     drawer.classList.contains('open')?closeDrawer():openDrawer();
   };
+
+  // Make drawer display:flex (was display:none before joining)
+  drawer.classList.add('ready');
+  // Start closed
+  closeDrawer();
 
   handle.addEventListener('click',toggleDrawer);
   openBtn?.addEventListener('click',openDrawer);
