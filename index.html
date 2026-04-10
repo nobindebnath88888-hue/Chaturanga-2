@@ -309,15 +309,20 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 @media(max-width:640px){
   html,body{overflow:hidden;height:100dvh;touch-action:manipulation}
 
-  /* ── Hide desktop-only panels ── */
+  /* ── Hide desktop-only elements ── */
   .sp{display:none!important}
   .btn-strip{display:none!important}
+  .ctrls{display:none!important}
+  .hnav{display:none!important}
+  #ot,#si{display:none!important}
+  .timerbar{display:none!important}
 
-  /* Game screen fills viewport */
+  /* Game screen */
   #gs{overflow:hidden!important}
   .gl{display:block!important;position:relative;width:100vw;height:100dvh}
 
-  /* cc2: vertical flex filling full screen */
+  /* cc2: vertical flex, full screen
+     Rows from top: [board-outer flex:1] [mob-btn-row ~44px] [ad-space 20dvh] */
   .cc2{
     position:absolute!important;
     top:0;left:0;right:0;bottom:0;
@@ -329,238 +334,220 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     overflow:hidden!important;
   }
 
-  /* ── Board area: flex col, takes all space above ad ── */
+  /* board-outer fills all space above buttons */
   .board-outer{
     display:flex!important;
     flex-direction:column!important;
-    align-items:center!important;
+    align-items:stretch!important;
     justify-content:flex-start!important;
     flex:1!important;
     min-height:0!important;
     gap:0!important;
+    width:100%!important;
   }
 
-  /* Corner rows: full width, fixed height matching avatar */
+  /* Corner rows: full width, tall enough for avatars */
   .board-corner-row{
     width:100%;
     display:flex!important;
     align-items:center;
     justify-content:space-between;
     padding:0 4px;
+    height:46px;
     min-height:46px;
+    max-height:46px;
     flex-shrink:0;
     position:relative;
   }
 
-  /* Corner cells: same as desktop — avatar + name outside */
+  /* Corner name cells — same style as desktop */
   .corner-name-cell{
-    background:none!important;border:none!important;
-    flex-direction:column!important;
-    gap:2px!important;
+    background:none!important;border:none!important;box-shadow:none!important;
+    flex-direction:column!important;gap:2px!important;
     align-items:flex-start!important;
-    padding:2px 0 2px 50px!important;
+    padding:2px 0 2px 48px!important;
     min-width:0!important;
-    box-shadow:none!important;
     justify-content:center!important;
   }
   #cn-tr,#cn-br{
     align-items:flex-end!important;
-    padding:2px 50px 2px 0!important;
+    padding:2px 48px 2px 0!important;
     text-align:right;
   }
-  .corner-name-cell.active .player-avatar{box-shadow:0 0 0 2px #ffe680!important}
-  /* Avatars same as desktop */
-  .player-avatar{width:38px;height:38px;border-radius:8px;font-size:14px}
   .corner-avatar{width:38px;height:38px;border-radius:8px;font-size:14px}
-  .cn-name-text{max-width:70px;font-size:9px}
+  .cn-name-text{max-width:68px;font-size:8px;color:#c8d8e8}
+  .center-timers{display:flex;align-items:center;justify-content:center;gap:4px;flex:1;min-width:0}
+  .ct-time{font-size:11px;min-width:34px}
+  .ct-pip{width:7px;height:7px;border-radius:2px}
 
-  /* Centre spacer timers */
-  .center-timers{display:flex;align-items:center;justify-content:center;gap:5px;flex:1;min-width:0}
-  .ct-time{font-size:12px}
-
-  /* Board canvas: square, fills remaining space between two corner rows */
+  /* board-wrap: takes remaining flex space between corner rows, square canvas inside */
   #board-wrap{
-    position:relative!important;
     flex:1!important;
     min-height:0!important;
-    width:100vw!important;
-    display:flex;align-items:center;justify-content:center;
+    width:100%!important;
+    position:relative!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    overflow:hidden!important;
   }
+
+  /* Canvas: sized by fitCanvas() JS — just center it */
   #gc{
     display:block!important;
-    /* Square: constrained by both vw and available flex height */
-    width:min(100vw, calc(80dvh - 92px - 38px - var(--mob-btn-h,48px)))!important;
-    height:min(100vw, calc(80dvh - 92px - 38px - var(--mob-btn-h,48px)))!important;
     cursor:pointer;
     box-shadow:none!important;
+    border-radius:4px;
+    flex-shrink:0;
   }
 
-  /* Timerbars hidden on mobile (corner cells show timers) */
-  .timerbar{display:none!important}
-
-  /* ── Mobile button row — horizontal strip ── */
+  /* ── Button row ── */
   .mob-btn-row{
     display:flex;
     align-items:center;
-    justify-content:center;
-    gap:7px;
-    padding:4px 8px;
-    background:rgba(6,12,26,.55);
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
-    border-top:1px solid rgba(180,140,50,.18);
+    justify-content:flex-start;
+    gap:5px;
+    padding:5px 8px;
+    height:44px;
     flex-shrink:0;
-    flex-wrap:nowrap;
+    background:rgba(4,9,20,.95);
+    border-top:1px solid rgba(180,140,50,.2);
+    border-bottom:1px solid rgba(180,140,50,.12);
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
   }
+  .mob-btn-row::-webkit-scrollbar{display:none}
   .mob-btn-row .bs-btn{
-    width:34px;height:34px;border-radius:7px;
+    width:32px;height:32px;border-radius:7px;
     border:1px solid rgba(180,140,50,.25);
     background:rgba(180,140,50,.07);
-    color:#d4a017;font-size:15px;cursor:pointer;
+    color:#d4a017;font-size:14px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    transition:all .15s;flex-shrink:0;padding:0;
+    transition:background .15s;flex-shrink:0;padding:0;
   }
   .mob-btn-row .bs-btn.bs-danger{color:#e74c3c;border-color:rgba(231,76,60,.28)}
-  .mob-btn-row .bs-btn.bs-draw{color:#27ae60;border-color:rgba(39,174,96,.28);font-size:18px;font-weight:700}
+  .mob-btn-row .bs-btn.bs-draw{color:#27ae60;border-color:rgba(39,174,96,.28);font-size:17px;font-weight:700}
   .mob-btn-row .bs-btn.bs-live{color:#27ae60}
-  .mob-btn-row .bs-sep{width:1px;height:22px;background:rgba(180,140,50,.22);flex-shrink:0}
-  .mob-btn-row .bs-pos{font-family:'Cinzel',serif;font-size:9px;color:#506080;min-width:28px;text-align:center}
-  /* Turn indicator inside button row */
+  .mob-btn-row .bs-btn:disabled{opacity:.3}
+  .mob-btn-row .bs-sep{width:1px;height:20px;background:rgba(180,140,50,.2);flex-shrink:0}
+  .mob-btn-row .bs-pos{font-family:'Cinzel',serif;font-size:8px;color:#506080;min-width:26px;text-align:center;flex-shrink:0}
+  /* Turn label: compact, left-aligned, doesn't push buttons off */
   .mob-turn-label{
-    font-family:'Cinzel',serif;font-size:10px;color:#d4a017;
-    flex:1;text-align:center;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis;
-    letter-spacing:.06em;
+    font-family:'Cinzel',serif;font-size:9px;color:#d4a017;
+    flex:0 1 90px;min-width:0;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;flex-shrink:1;
   }
 
-  /* ── Ad space: 20% of viewport height ── */
+  /* ── Ad space: exactly 20dvh ── */
   #ad-space{
-    width:100%;
-    height:20dvh;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(4,9,20,.85);
-    border-top:1px solid rgba(180,140,50,.12);
+    width:100%;height:20dvh;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(4,9,20,.9);
+    border-top:1px solid rgba(180,140,50,.1);
   }
   .mob-ad-label{
     font-family:'Cinzel',serif;font-size:8px;letter-spacing:.12em;
     color:#1e2a3a;text-transform:uppercase;
   }
 
-  /* ── Chat open FAB ── */
+  /* ── Chat FAB: sits above ad space, right side ── */
   #mob-openbtn{
     position:fixed;
     z-index:120;
     right:12px;
-    bottom:calc(20dvh + 10px);
-    width:44px;height:44px;border-radius:50%;
-    background:rgba(10,22,40,.88);
-    border:1px solid rgba(180,140,50,.5);
-    color:#d4a017;font-size:19px;cursor:pointer;
+    bottom:calc(20dvh + 8px);
+    width:42px;height:42px;border-radius:50%;
+    background:rgba(8,18,36,.9);
+    border:1px solid rgba(180,140,50,.55);
+    color:#d4a017;font-size:18px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 4px 16px rgba(0,0,0,.6);
+    box-shadow:0 3px 14px rgba(0,0,0,.7);
     transition:transform .15s;
+    font-family:inherit;
+    line-height:1;
   }
-  #mob-openbtn:active{transform:scale(.92)}
-  /* Unread count badge on FAB */
+  #mob-openbtn:active{transform:scale(.91)}
   #mob-fab-badge{
-    position:absolute;top:-4px;right:-4px;
+    position:absolute;top:-5px;right:-5px;
     min-width:18px;height:18px;border-radius:9px;
     background:#e74c3c;color:#fff;
     font-family:'Cinzel',serif;font-size:9px;font-weight:700;
     display:none;align-items:center;justify-content:center;
-    padding:0 3px;line-height:18px;
+    padding:0 3px;line-height:18px;pointer-events:none;
   }
 
-  /* ── Drawer: hovers over board, fully transparent bg ── */
+  /* ── Drawer: slides up from above ad, max stops below button row ── */
   #mob-drawer{
     position:fixed;
     left:0;right:0;
-    bottom:calc(20dvh);       /* sits above ad space */
-    max-height:72dvh;
-    /* Transparent so board shows through */
-    background:rgba(4,9,20,.18);
-    backdrop-filter:blur(18px) saturate(1.4);
-    -webkit-backdrop-filter:blur(18px) saturate(1.4);
-    border-top:1px solid rgba(180,140,50,.35);
+    bottom:20dvh;
+    /* Max = screen above ad minus button row = 80dvh - 44px, leave 10px gap */
+    max-height:calc(80dvh - 54px);
+    background:rgba(6,12,26,.15);
+    backdrop-filter:blur(20px) saturate(1.6);
+    -webkit-backdrop-filter:blur(20px) saturate(1.6);
+    border:1px solid rgba(180,140,50,.3);
+    border-bottom:none;
     border-radius:16px 16px 0 0;
-    z-index:110;
+    z-index:115;
     transform:translateY(100%);
-    transition:transform .32s cubic-bezier(.4,0,.2,1);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
     display:flex!important;
     flex-direction:column;
     overflow:hidden;
   }
   #mob-drawer.open{transform:translateY(0)}
 
-  /* Handle */
   .mob-handle{
-    text-align:center;padding:7px 0 5px;
-    color:#ffe680;font-size:13px;font-weight:700;
-    font-family:'Cinzel',serif;letter-spacing:.12em;
+    text-align:center;padding:8px 0 6px;
+    color:#ffe680;font-size:12px;font-weight:700;
+    font-family:'Cinzel',serif;letter-spacing:.14em;
     cursor:pointer;flex-shrink:0;line-height:1;
-    background:rgba(180,140,50,.08);
-    border-bottom:1px solid rgba(180,140,50,.15);
-    text-shadow:0 1px 8px rgba(0,0,0,.9);
+    background:rgba(180,140,50,.1);
+    border-bottom:1px solid rgba(180,140,50,.18);
+    text-shadow:0 1px 8px rgba(0,0,0,1);
   }
-
-  /* Tabs */
   .mob-tabs{
     display:flex;flex-shrink:0;
-    border-bottom:1px solid rgba(180,140,50,.18);
-    background:rgba(6,12,26,.25);
+    border-bottom:1px solid rgba(180,140,50,.16);
+    background:rgba(4,9,20,.2);
   }
   .mob-tab{
-    flex:1;font-family:'Cinzel',serif;font-size:11px;font-weight:700;
-    letter-spacing:.08em;padding:8px 4px 6px;text-align:center;
-    color:rgba(200,216,232,.75);cursor:pointer;
+    flex:1;font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+    letter-spacing:.06em;padding:7px 2px 5px;text-align:center;
+    color:rgba(180,200,220,.7);cursor:pointer;
     border:none;background:transparent;transition:color .15s;
-    text-shadow:0 1px 6px rgba(0,0,0,.8);
+    text-shadow:0 1px 6px rgba(0,0,0,.9);
   }
-  .mob-tab.active{
-    color:#ffe080;border-bottom:2px solid #ffe080;
-    text-shadow:0 0 10px rgba(255,200,0,.7);
-  }
+  .mob-tab.active{color:#ffe080;border-bottom:2px solid #ffe080;text-shadow:0 0 10px rgba(255,200,0,.6)}
   .mob-badge{
     display:inline-flex;align-items:center;justify-content:center;
-    min-width:16px;height:16px;border-radius:8px;padding:0 4px;
-    background:#e74c3c;color:#fff;font-size:9px;font-weight:700;
-    font-family:'Cinzel',serif;margin-left:4px;vertical-align:middle;line-height:16px;
+    min-width:15px;height:15px;border-radius:8px;padding:0 3px;
+    background:#e74c3c;color:#fff;font-size:8px;font-weight:700;
+    font-family:'Cinzel',serif;margin-left:3px;vertical-align:middle;line-height:15px;
   }
-
-  /* Panels: transparent background so board shows through */
-  .mob-panel{
-    display:none;flex:1;overflow-y:auto;
-    flex-direction:column;min-height:0;
-    background:transparent;
-  }
+  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;background:transparent}
   .mob-panel.active{display:flex}
 
-  /* Chat messages readable on transparent bg */
-  .msg.me{background:rgba(140,100,10,.75)!important}
-  .msg.ot{background:rgba(10,20,50,.72)!important}
-  .msg.sy{background:rgba(6,12,26,.55)!important}
-  .mt{text-shadow:0 1px 4px rgba(0,0,0,.9)}
-  .ma{text-shadow:0 1px 3px rgba(0,0,0,.8)}
-
-  /* Chat input row on transparent bg */
-  .cir{background:rgba(6,12,26,.55)!important;
-       backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  /* Messages stay readable on glass bg */
+  .msg.me{background:rgba(130,90,5,.8)!important}
+  .msg.ot{background:rgba(8,16,44,.78)!important}
+  .msg.sy{background:rgba(4,10,22,.6)!important}
+  .mt{color:#eee;text-shadow:0 1px 5px rgba(0,0,0,.95)}
+  .ma{text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .cir{background:rgba(4,9,20,.6)!important;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 
   /* Promotion modal */
   .pm{position:fixed!important;top:0;left:0;right:0;bottom:0;z-index:200;border-radius:0}
-
-  /* Hide old top ctrls and bottom hnav — replaced by mob-btn-row */
-  .ctrls{display:none!important}
-  .hnav{display:none!important}
-  #ot,#si{display:none!important}
 }
 @media(min-width:641px){
   #mob-drawer{display:none!important}
   #mob-openbtn{display:none!important}
   .btn-strip{display:flex}
+  .mob-btn-row{display:none!important}
+  #ad-space{display:none!important}
 }
 @media(max-width:640px){
   #mob-openbtn{display:flex}
@@ -669,10 +656,9 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
       <div class="corner-name-cell" id="cn-br"></div>
       <div class="corner-avatar ca-right" id="av-br"></div>
      </div>
-     <div id="ad-space"><span class="mob-ad-label">Advertisement</span></div>
     </div>
     <div id="si" class="bi" style="opacity:0">&#183;</div>
-    <!-- Mobile button row (hidden on desktop via .btn-strip rule) -->
+    <!-- Mobile button row -->
     <div class="mob-btn-row" id="mob-btn-row">
      <span class="mob-turn-label" id="mob-td">Waiting…</span>
      <div class="bs-sep"></div>
@@ -687,6 +673,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <button class="bs-btn" id="mb-hnext" disabled title="Next">&#8250;</button>
      <button class="bs-btn bs-live" id="mb-hlive" style="display:none" title="Live">&#9679;</button>
     </div>
+    <!-- Ad space: 20% of screen height -->
+    <div id="ad-space"><span class="mob-ad-label">Advertisement</span></div>
     <div class="hnav">
      <button class="hnbtn" id="hprev" disabled>&lt;</button>
      <span class="hpos" id="hpos">0/0</span>
@@ -1521,16 +1509,18 @@ function enterGame(){
 
 function fitCanvas(c){
   if(window.innerWidth<=640){
-    c.style.width='';
-    c.style.height='';
+    // Mobile: total height minus two corner rows (92px), button row (44px), ad (20dvh)
+    const adH = window.innerHeight * 0.20;
+    const availH = window.innerHeight - 92 - 44 - adH;
+    const sz = Math.max(200, Math.floor(Math.min(window.innerWidth, availH)));
+    c.style.width = sz + 'px';
+    c.style.height = sz + 'px';
   } else {
-    // Board column = 1fr. Subtract btn-strip(44) + chat(290) + ad(20%) from viewport.
-    const adW=window.innerWidth*0.20;
-    const availW=window.innerWidth-44-290-adW-24; // 24px safety margin
-    // Vertical: two corner rows at 46px each = 92px, plus 20px padding/gaps
-    const availH=window.innerHeight-112;
-    const sz=Math.max(260,Math.min(availW,availH));
-    c.style.width=sz+'px'; c.style.height=sz+'px';
+    const adW = window.innerWidth * 0.20;
+    const availW = window.innerWidth - 44 - 290 - adW - 24;
+    const availH = window.innerHeight - 112;
+    const sz = Math.max(260, Math.min(availW, availH));
+    c.style.width = sz + 'px'; c.style.height = sz + 'px';
   }
 }
 
