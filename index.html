@@ -1790,9 +1790,9 @@ async function commitMove(move,promo){
   const teamsLeft=[...new Set(surviving.map(col=>TEAMS[col]))];
   const winner=teamsLeft.length===1?teamsLeft[0]:null;
 
-  // Move notation
+  // Move notation — use full display label prefix (Black, White, Red, Gold)
   const colorLabel=PIECE_COLORS[myColor]?.label||myColor;
-  const note=`${colorLabel[0].toUpperCase()}: ${piece.type}${move.capture?'x':''}${sqName(move.to[0],move.to[1])}${move.castle?'(O-O)':''}${move.promo?'='+promo:''}`;
+  const note=`${colorLabel}: ${piece.type}${move.capture?'x':''}${sqName(move.to[0],move.to[1])}${move.castle?'(O-O)':''}${move.promo?'='+promo:''}`;
   const elimObj=newElim.length>0?Object.fromEntries(newElim.map((col,i)=>[i,col])):null;
 
   selSq=null;legals=[];
@@ -2354,9 +2354,13 @@ function updTurn(){
     if(mEl) mEl.textContent='Game Over';
     return;
   }
-  const n=GS.players?.[ct]?.name||ct;
+  // Use player's entered name, or fall back to display color label (never internal key)
+  const displayLabel=PIECE_COLORS[ct]?.label||ct;
+  const n=GS.players?.[ct]?.name||displayLabel;
   const txt=ct===myColor?'\u26a1 YOUR TURN':n+"'s turn";
-  const clr=ct===myColor?'#ffe680':'#7080a0';
+  // Color the text to match the current player's color
+  const colorMap={red:'#a0a0a0',blue:'#b0d4e8',green:'#e06070',gold:'#d4a017'};
+  const clr=ct===myColor?'#ffe680':(colorMap[ct]||'#7080a0');
   if(el){el.textContent=txt;el.style.color=clr;}
   if(mEl){mEl.textContent=txt;mEl.style.color=clr;}
 }
