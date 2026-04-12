@@ -1791,7 +1791,8 @@ async function commitMove(move,promo){
   const winner=teamsLeft.length===1?teamsLeft[0]:null;
 
   // Move notation
-  const note=`${myColor[0].toUpperCase()}: ${piece.type}${move.capture?'x':''}${sqName(move.to[0],move.to[1])}${move.castle?'(O-O)':''}${move.promo?'='+promo:''}`;
+  const colorLabel=PIECE_COLORS[myColor]?.label||myColor;
+  const note=`${colorLabel[0].toUpperCase()}: ${piece.type}${move.capture?'x':''}${sqName(move.to[0],move.to[1])}${move.castle?'(O-O)':''}${move.promo?'='+promo:''}`;
   const elimObj=newElim.length>0?Object.fromEntries(newElim.map((col,i)=>[i,col])):null;
 
   selSq=null;legals=[];
