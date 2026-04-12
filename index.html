@@ -316,6 +316,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   .hnav{display:none!important}
   #ot,#si{display:none!important}
   .timerbar{display:none!important}
+  /* Hide desktop ad column so "ored ace" text doesn't bleed through */
+  .ad-col{display:none!important}
 
   /* Game screen */
   #gs{overflow:hidden!important}
@@ -452,52 +454,47 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     color:#1e2a3a;text-transform:uppercase;
   }
 
-  /* ── Chat FAB: sits above ad space, right side ── */
+  /* ── Chat FAB: fixed at right of button row ── */
   #mob-openbtn{
     position:fixed;
     z-index:120;
-    right:12px;
-    bottom:calc(20dvh + 8px);
-    width:42px;height:42px;border-radius:50%;
-    background:rgba(8,18,36,.9);
-    border:1px solid rgba(180,140,50,.55);
-    color:#d4a017;font-size:18px;cursor:pointer;
+    right:8px;
+    /* Vertically centered in the 44px button row which starts at 20dvh from bottom */
+    bottom:calc(20dvh + 6px);
+    width:32px;height:32px;border-radius:7px;
+    background:rgba(180,140,50,.18);
+    border:1px solid rgba(180,140,50,.45);
+    color:#d4a017;font-size:16px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 3px 14px rgba(0,0,0,.7);
-    transition:transform .15s;
-    font-family:inherit;
+    transition:background .15s;
     line-height:1;
   }
-  #mob-openbtn:active{transform:scale(.91)}
+  #mob-openbtn:active{background:rgba(180,140,50,.35)}
   #mob-fab-badge{
-    position:absolute;top:-5px;right:-5px;
-    min-width:18px;height:18px;border-radius:9px;
+    position:absolute;top:-4px;right:-4px;
+    min-width:16px;height:16px;border-radius:8px;
     background:#e74c3c;color:#fff;
-    font-family:'Cinzel',serif;font-size:9px;font-weight:700;
+    font-family:'Cinzel',serif;font-size:8px;font-weight:700;
     display:none;align-items:center;justify-content:center;
-    padding:0 3px;line-height:18px;pointer-events:none;
+    padding:0 3px;line-height:16px;pointer-events:none;
   }
 
-  /* ── Drawer: slides up from above ad, max stops below button row ── */
+  /* ── Drawer: positioned INSIDE the ad area, slides up above button row ── */
   #mob-drawer{
     position:fixed;
     left:0;right:0;
-    /* Anchor to bottom of screen; height defined so it sits above btn+ad */
+    /* Bottom of drawer bottom-edge = bottom of screen */
     bottom:0;
-    height:calc(80dvh - 54px);
-    /* Push below viewport when closed — translateY(100%) moves it fully off screen */
+    /* Height: fills from bottom of screen up to just above button row, staying in ad zone */
+    height:calc(20dvh + 44px);
+    /* Slide fully below viewport when closed */
     transform:translateY(100%);
     transition:transform .3s cubic-bezier(.4,0,.2,1);
-    /* Margin-bottom keeps content above button row and ad */
-    margin-bottom:calc(20dvh + 44px);
-    background:rgba(6,12,26,.18);
-    backdrop-filter:blur(20px) saturate(1.6);
-    -webkit-backdrop-filter:blur(20px) saturate(1.6);
-    border:1px solid rgba(180,140,50,.3);
-    border-bottom:none;
-    border-radius:16px 16px 0 0;
+    /* Fully transparent — board shows through */
+    background:transparent;
+    border:none;
+    border-radius:0;
     z-index:115;
-    /* Controlled entirely by JS */
     display:none;
     flex-direction:column;
     overflow:hidden;
@@ -507,44 +504,56 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     transform:translateY(0);
   }
 
+  /* Handle: completely transparent, just a thin tap target at top */
   .mob-handle{
-    text-align:center;padding:8px 0 6px;
-    color:#ffe680;font-size:12px;font-weight:700;
+    text-align:center;
+    padding:6px 0 4px;
+    color:#ffe680;
+    font-size:11px;font-weight:700;
     font-family:'Cinzel',serif;letter-spacing:.14em;
     cursor:pointer;flex-shrink:0;line-height:1;
-    background:rgba(180,140,50,.1);
-    border-bottom:1px solid rgba(180,140,50,.18);
-    text-shadow:0 1px 8px rgba(0,0,0,1);
+    background:transparent;
+    border:none;
+    text-shadow:0 1px 10px rgba(0,0,0,1),0 0 20px rgba(0,0,0,1);
   }
+  /* Tabs: transparent background */
   .mob-tabs{
     display:flex;flex-shrink:0;
-    border-bottom:1px solid rgba(180,140,50,.16);
-    background:rgba(4,9,20,.2);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    background:transparent;
   }
   .mob-tab{
     flex:1;font-family:'Cinzel',serif;font-size:10px;font-weight:700;
-    letter-spacing:.06em;padding:7px 2px 5px;text-align:center;
-    color:rgba(180,200,220,.7);cursor:pointer;
+    letter-spacing:.06em;padding:6px 2px 4px;text-align:center;
+    color:rgba(200,220,240,.75);cursor:pointer;
     border:none;background:transparent;transition:color .15s;
-    text-shadow:0 1px 6px rgba(0,0,0,.9);
+    text-shadow:0 1px 8px rgba(0,0,0,1);
   }
-  .mob-tab.active{color:#ffe080;border-bottom:2px solid #ffe080;text-shadow:0 0 10px rgba(255,200,0,.6)}
+  .mob-tab.active{color:#ffe080;border-bottom:2px solid #ffe080;text-shadow:0 0 12px rgba(255,200,0,.7)}
   .mob-badge{
     display:inline-flex;align-items:center;justify-content:center;
     min-width:15px;height:15px;border-radius:8px;padding:0 3px;
     background:#e74c3c;color:#fff;font-size:8px;font-weight:700;
     font-family:'Cinzel',serif;margin-left:3px;vertical-align:middle;line-height:15px;
   }
+  /* Panels: fully transparent */
   .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;background:transparent}
   .mob-panel.active{display:flex}
 
-  /* Messages stay readable on glass bg */
-  .msg.me{background:rgba(130,90,5,.8)!important}
-  .msg.ot{background:rgba(8,16,44,.78)!important}
-  .msg.sy{background:rgba(4,10,22,.6)!important}
-  .mt{color:#eee;text-shadow:0 1px 5px rgba(0,0,0,.95)}
-  .ma{text-shadow:0 1px 3px rgba(0,0,0,.9)}
-  .cir{background:rgba(4,9,20,.6)!important;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  /* Messages: high contrast with heavy text shadow so readable on any board state */
+  .msg.me{background:rgba(120,80,0,.55)!important;backdrop-filter:blur(4px)}
+  .msg.ot{background:rgba(6,14,38,.55)!important;backdrop-filter:blur(4px)}
+  .msg.sy{background:rgba(0,0,0,.35)!important}
+  .mt{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,1);font-size:12px}
+  .ma{text-shadow:0 1px 4px rgba(0,0,0,1);font-size:9px}
+
+  /* Chat input: transparent with blur */
+  .cir{
+    background:rgba(0,0,0,.25)!important;
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+    border-top:1px solid rgba(255,255,255,.08)!important;
+  }
 
   /* Promotion modal */
   .pm{position:fixed!important;top:0;left:0;right:0;bottom:0;z-index:200;border-radius:0}
@@ -1385,7 +1394,7 @@ async function doJoin(){
       setStat('Room created! Share ID: '+rid);
     }else{
       const ex=snap.val();
-      if(ex.players?.[myColor]?.name&&ex.players[myColor].name!==myName){setStat('Color '+myColor+' is taken!');return;}
+      if(ex.players?.[myColor]?.name&&ex.players[myColor].name!==myName){setStat((PIECE_COLORS[myColor]?.label||myColor)+' is already taken!');return;}
       await update(ref(db2,`rooms/${rid}/players/${myColor}`),{name:myName,online:true});
       setStat('Joined room '+rid+'!');
     }
