@@ -483,10 +483,10 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   #mob-drawer{
     position:fixed;
     left:0;right:0;
-    /* Bottom of drawer bottom-edge = bottom of screen */
-    bottom:0;
-    /* Height: fills from bottom of screen up to just above button row, staying in ad zone */
-    height:calc(20dvh + 44px);
+    /* Anchored above the ad space */
+    bottom:20dvh;
+    /* Covers the full board area — from above ad up to top of screen */
+    height:calc(80dvh - 44px);
     /* Slide fully below viewport when closed */
     transform:translateY(100%);
     transition:transform .3s cubic-bezier(.4,0,.2,1);
