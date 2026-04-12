@@ -431,7 +431,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   }
   .mob-btn-row .bs-btn.bs-danger{color:#e74c3c;border-color:rgba(231,76,60,.28)}
   .mob-btn-row .bs-btn.bs-draw{color:#27ae60;border-color:rgba(39,174,96,.28);font-size:17px;font-weight:700}
-  .mob-btn-row .bs-btn.bs-chat{color:#7ab8e8;border-color:rgba(100,170,220,.3);font-size:15px}
+  .mob-btn-row .bs-btn.bs-chat{color:#7ab8e8;border-color:rgba(100,170,220,.3);font-size:15px;position:relative}
   .mob-btn-row .bs-btn.bs-chat.active{background:rgba(100,170,220,.22);border-color:rgba(100,170,220,.6);color:#b0d8f8}
   .mob-btn-row .bs-btn.bs-live{color:#27ae60}
   .mob-btn-row .bs-btn:disabled{opacity:.3}
@@ -530,42 +530,16 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     border-top:1px solid rgba(180,140,50,.3)!important;
   }
 
-  /* ── FAB: LEFT side of button row so it doesn't clash with send button ── */
-  #mob-openbtn{
-    position:fixed;
-    z-index:120;
-    left:8px;
-    bottom:calc(20dvh + 6px);
-    width:32px;height:32px;border-radius:7px;
-    background:rgba(180,140,50,.18);
-    border:1px solid rgba(180,140,50,.45);
-    color:#d4a017;font-size:16px;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    transition:background .15s;
-    line-height:1;
-  }
-  #mob-openbtn:active{background:rgba(180,140,50,.35)}
-  #mob-fab-badge{
-    position:absolute;top:-4px;right:-4px;
-    min-width:16px;height:16px;border-radius:8px;
-    background:#e74c3c;color:#fff;
-    font-family:'Cinzel',serif;font-size:8px;font-weight:700;
-    display:none;align-items:center;justify-content:center;
-    padding:0 3px;line-height:16px;pointer-events:none;
-  }
-
   /* Promotion modal */
   .pm{position:fixed!important;top:0;left:0;right:0;bottom:0;z-index:200;border-radius:0}
 }
 @media(min-width:641px){
   #mob-drawer{display:none!important}
-  #mob-openbtn{display:none!important}
   .btn-strip{display:flex}
   .mob-btn-row{display:none!important}
   #ad-space{display:none!important}
 }
 @media(max-width:640px){
-  #mob-openbtn{display:flex}
   .btn-strip{display:none!important}
 }
 </style>
@@ -681,7 +655,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <button class="bs-btn" id="mb-themebtn" title="Theme">&#127769;</button>
      <button class="bs-btn bs-danger" id="mb-resbtn" title="Resign">&#127987;</button>
      <button class="bs-btn bs-draw" id="mb-drawbtn" title="Draw">&#189;</button>
-     <button class="bs-btn bs-chat" id="mb-chatbtn" title="Chat">&#128172;</button>
+     <button class="bs-btn bs-chat" id="mb-chatbtn" title="Chat">&#128172;<span id="mob-chat-badge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;border-radius:7px;background:#e74c3c;color:#fff;font-family:'Cinzel',serif;font-size:7px;font-weight:700;line-height:14px;text-align:center;padding:0 2px;pointer-events:none"></span></button>
      <div class="bs-sep"></div>
      <button class="bs-btn" id="mb-hprev" disabled title="Prev">&#8249;</button>
      <span class="bs-pos" id="mb-hpos">0/0</span>
@@ -799,10 +773,6 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     <div id="mob-pl"></div>
   </div>
 </div>
-<!-- FAB chat button with unread badge -->
-<button id="mob-openbtn" title="Chat &amp; Players" style="display:none">
-  💬<span id="mob-fab-badge"></span>
-</button>
 <canvas id="drag-piece" width="80" height="80"></canvas>
 
 </div>
@@ -1531,10 +1501,8 @@ function enterGame(){
   SFX.join();
   setupVoiceTyping();
   setupMobileDrawer();
-  // Show FAB only after joining; drawer stays off-screen (transform) until opened
-  const mb=document.getElementById('mob-openbtn');
-  if(mb&&window.innerWidth<=640){mb.style.display='flex';}
 }
+
 
 function fitCanvas(c){
   if(window.innerWidth<=640){
@@ -2015,19 +1983,15 @@ function _updBadge(tab){
   } else {
     el.style.display='none';
   }
-  // Also flash the open button if drawer is closed
-  const openBtn=document.getElementById('mob-openbtn');
+  // Also update unread count on chat button
   const total=_unread.tchat+_unread.pchat;
-  const fab=document.getElementById('mob-fab-badge');
-  if(openBtn){
-    openBtn.childNodes[0].textContent='💬';
-  }
-  if(fab){
+  const chatBadge=document.getElementById('mob-chat-badge');
+  if(chatBadge){
     if(total>0){
-      fab.textContent=total>99?'99+':total;
-      fab.style.display='inline-flex';
+      chatBadge.textContent=total>99?'99+':total;
+      chatBadge.style.display='inline-block';
     }else{
-      fab.style.display='none';
+      chatBadge.style.display='none';
     }
   }
 
@@ -3025,7 +2989,6 @@ function startVoiceTyping(btnId, inpId){
 function setupMobileDrawer(){
   const drawer=document.getElementById('mob-drawer');
   const handle=document.getElementById('mob-handle');
-  const openBtn=document.getElementById('mob-openbtn');
   if(!drawer)return;
 
   const closeDrawer=()=>{
@@ -3049,7 +3012,6 @@ function setupMobileDrawer(){
   handle.textContent='▲ CHAT';
 
   handle.addEventListener('click',toggleDrawer);
-  openBtn?.addEventListener('click',openDrawer);
 
   // Tab switching — including new movelog tab
   document.querySelectorAll('.mob-tab').forEach(tab=>{
