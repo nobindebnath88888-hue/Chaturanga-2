@@ -454,12 +454,80 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     color:#1e2a3a;text-transform:uppercase;
   }
 
-  /* ── Chat FAB: fixed at right of button row ── */
+  /* ── Drawer: over the board, transparent chat area ── */
+  #mob-drawer{
+    position:fixed;
+    left:0;right:0;
+    bottom:20dvh;
+    height:calc(80dvh - 44px);
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    background:transparent;
+    border:none;
+    border-radius:0;
+    z-index:115;
+    display:none;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  #mob-drawer.open{
+    display:flex;
+    transform:translateY(0);
+  }
+
+  /* Handle bar: semi-opaque so it's clearly a tap target */
+  .mob-handle{
+    text-align:center;
+    padding:7px 0 5px;
+    color:#ffe680;
+    font-size:11px;font-weight:700;
+    font-family:'Cinzel',serif;letter-spacing:.14em;
+    cursor:pointer;flex-shrink:0;line-height:1;
+    background:rgba(6,12,26,.72);
+    border-bottom:1px solid rgba(180,140,50,.35);
+    text-shadow:0 1px 6px rgba(0,0,0,.9);
+  }
+  /* Tab bar: semi-opaque */
+  .mob-tabs{
+    display:flex;flex-shrink:0;
+    border-bottom:1px solid rgba(180,140,50,.3);
+    background:rgba(6,12,26,.68);
+  }
+  .mob-tab{
+    flex:1;font-family:'Cinzel',serif;font-size:10px;font-weight:700;
+    letter-spacing:.06em;padding:7px 2px 5px;text-align:center;
+    color:rgba(200,220,240,.75);cursor:pointer;
+    border:none;background:transparent;transition:color .15s;
+  }
+  .mob-tab.active{color:#ffe080;border-bottom:2px solid #ffe080}
+  .mob-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:15px;height:15px;border-radius:8px;padding:0 3px;
+    background:#e74c3c;color:#fff;font-size:8px;font-weight:700;
+    font-family:'Cinzel',serif;margin-left:3px;vertical-align:middle;line-height:15px;
+  }
+  /* Chat panel: fully transparent — board visible through */
+  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;background:transparent}
+  .mob-panel.active{display:flex}
+
+  /* Messages readable over board */
+  .msg.me{background:rgba(120,80,0,.6)!important}
+  .msg.ot{background:rgba(6,14,38,.6)!important}
+  .msg.sy{background:rgba(0,0,0,.4)!important}
+  .mt{color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.95);font-size:12px}
+  .ma{text-shadow:0 1px 3px rgba(0,0,0,.9);font-size:9px}
+
+  /* Input row: semi-opaque bar at bottom of drawer */
+  .cir{
+    background:rgba(6,12,26,.72)!important;
+    border-top:1px solid rgba(180,140,50,.3)!important;
+  }
+
+  /* ── FAB: LEFT side of button row so it doesn't clash with send button ── */
   #mob-openbtn{
     position:fixed;
     z-index:120;
-    right:8px;
-    /* Vertically centered in the 44px button row which starts at 20dvh from bottom */
+    left:8px;
     bottom:calc(20dvh + 6px);
     width:32px;height:32px;border-radius:7px;
     background:rgba(180,140,50,.18);
@@ -477,82 +545,6 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
     font-family:'Cinzel',serif;font-size:8px;font-weight:700;
     display:none;align-items:center;justify-content:center;
     padding:0 3px;line-height:16px;pointer-events:none;
-  }
-
-  /* ── Drawer: positioned INSIDE the ad area, slides up above button row ── */
-  #mob-drawer{
-    position:fixed;
-    left:0;right:0;
-    /* Anchored above the ad space */
-    bottom:20dvh;
-    /* Covers the full board area — from above ad up to top of screen */
-    height:calc(80dvh - 44px);
-    /* Slide fully below viewport when closed */
-    transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.4,0,.2,1);
-    /* Fully transparent — board shows through */
-    background:transparent;
-    border:none;
-    border-radius:0;
-    z-index:115;
-    display:none;
-    flex-direction:column;
-    overflow:hidden;
-  }
-  #mob-drawer.open{
-    display:flex;
-    transform:translateY(0);
-  }
-
-  /* Handle: completely transparent, just a thin tap target at top */
-  .mob-handle{
-    text-align:center;
-    padding:6px 0 4px;
-    color:#ffe680;
-    font-size:11px;font-weight:700;
-    font-family:'Cinzel',serif;letter-spacing:.14em;
-    cursor:pointer;flex-shrink:0;line-height:1;
-    background:transparent;
-    border:none;
-    text-shadow:0 1px 10px rgba(0,0,0,1),0 0 20px rgba(0,0,0,1);
-  }
-  /* Tabs: transparent background */
-  .mob-tabs{
-    display:flex;flex-shrink:0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    background:transparent;
-  }
-  .mob-tab{
-    flex:1;font-family:'Cinzel',serif;font-size:10px;font-weight:700;
-    letter-spacing:.06em;padding:6px 2px 4px;text-align:center;
-    color:rgba(200,220,240,.75);cursor:pointer;
-    border:none;background:transparent;transition:color .15s;
-    text-shadow:0 1px 8px rgba(0,0,0,1);
-  }
-  .mob-tab.active{color:#ffe080;border-bottom:2px solid #ffe080;text-shadow:0 0 12px rgba(255,200,0,.7)}
-  .mob-badge{
-    display:inline-flex;align-items:center;justify-content:center;
-    min-width:15px;height:15px;border-radius:8px;padding:0 3px;
-    background:#e74c3c;color:#fff;font-size:8px;font-weight:700;
-    font-family:'Cinzel',serif;margin-left:3px;vertical-align:middle;line-height:15px;
-  }
-  /* Panels: fully transparent */
-  .mob-panel{display:none;flex:1;overflow-y:auto;flex-direction:column;min-height:0;background:transparent}
-  .mob-panel.active{display:flex}
-
-  /* Messages: high contrast with heavy text shadow so readable on any board state */
-  .msg.me{background:rgba(120,80,0,.55)!important;backdrop-filter:blur(4px)}
-  .msg.ot{background:rgba(6,14,38,.55)!important;backdrop-filter:blur(4px)}
-  .msg.sy{background:rgba(0,0,0,.35)!important}
-  .mt{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,1);font-size:12px}
-  .ma{text-shadow:0 1px 4px rgba(0,0,0,1);font-size:9px}
-
-  /* Chat input: transparent with blur */
-  .cir{
-    background:rgba(0,0,0,.25)!important;
-    backdrop-filter:blur(4px);
-    -webkit-backdrop-filter:blur(4px);
-    border-top:1px solid rgba(255,255,255,.08)!important;
   }
 
   /* Promotion modal */
