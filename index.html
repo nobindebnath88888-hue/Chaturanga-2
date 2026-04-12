@@ -431,6 +431,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   }
   .mob-btn-row .bs-btn.bs-danger{color:#e74c3c;border-color:rgba(231,76,60,.28)}
   .mob-btn-row .bs-btn.bs-draw{color:#27ae60;border-color:rgba(39,174,96,.28);font-size:17px;font-weight:700}
+  .mob-btn-row .bs-btn.bs-chat{color:#7ab8e8;border-color:rgba(100,170,220,.3);font-size:15px}
+  .mob-btn-row .bs-btn.bs-chat.active{background:rgba(100,170,220,.22);border-color:rgba(100,170,220,.6);color:#b0d8f8}
   .mob-btn-row .bs-btn.bs-live{color:#27ae60}
   .mob-btn-row .bs-btn:disabled{opacity:.3}
   .mob-btn-row .bs-sep{width:1px;height:20px;background:rgba(180,140,50,.2);flex-shrink:0}
@@ -516,6 +518,11 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
   .msg.sy{background:rgba(0,0,0,.4)!important}
   .mt{color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.95);font-size:12px}
   .ma{text-shadow:0 1px 3px rgba(0,0,0,.9);font-size:9px}
+
+  /* Bold text in move log and players panels */
+  #mob-movelog .le{font-weight:700;font-size:11px}
+  #mob-players .pr{font-weight:700}
+  #mob-players .pnl{font-weight:700;font-size:12px}
 
   /* Input row: semi-opaque bar at bottom of drawer */
   .cir{
@@ -674,7 +681,7 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
      <button class="bs-btn" id="mb-themebtn" title="Theme">&#127769;</button>
      <button class="bs-btn bs-danger" id="mb-resbtn" title="Resign">&#127987;</button>
      <button class="bs-btn bs-draw" id="mb-drawbtn" title="Draw">&#189;</button>
-     <button class="bs-btn" id="mb-pgndl" title="PGN">&#11015;</button>
+     <button class="bs-btn bs-chat" id="mb-chatbtn" title="Chat">&#128172;</button>
      <div class="bs-sep"></div>
      <button class="bs-btn" id="mb-hprev" disabled title="Prev">&#8249;</button>
      <span class="bs-pos" id="mb-hpos">0/0</span>
@@ -1479,7 +1486,23 @@ function enterGame(){
   document.getElementById('mb-themebtn')?.addEventListener('click',()=>document.getElementById('themebtn').click());
   document.getElementById('mb-resbtn')?.addEventListener('click',()=>document.getElementById('resbtn').click());
   document.getElementById('mb-drawbtn')?.addEventListener('click',()=>document.getElementById('drawbtn').click());
-  document.getElementById('mb-pgndl')?.addEventListener('click',downloadPGN);
+  document.getElementById('mb-chatbtn')?.addEventListener('click',()=>{
+    const drawer=document.getElementById('mob-drawer');
+    const btn=document.getElementById('mb-chatbtn');
+    if(drawer&&drawer.classList.contains('open')){
+      // close
+      drawer.classList.remove('open');
+      document.getElementById('mob-handle').textContent='▲ CHAT';
+      setTimeout(()=>{ if(!drawer.classList.contains('open')) drawer.style.display='none'; },320);
+      btn.classList.remove('active');
+    } else if(drawer){
+      drawer.style.display='flex';
+      drawer.offsetHeight;
+      drawer.classList.add('open');
+      document.getElementById('mob-handle').textContent='▼ CLOSE';
+      btn.classList.add('active');
+    }
+  });
   document.getElementById('mb-hprev')?.addEventListener('click',()=>{
     if(histIdx<0) histIdx=moveHistory.length-1;
     else if(histIdx>0) histIdx--;
@@ -3008,15 +3031,15 @@ function setupMobileDrawer(){
   const closeDrawer=()=>{
     drawer.classList.remove('open');
     handle.textContent='▲ CHAT';
-    // After transition, hide completely so it can't be interacted with
+    document.getElementById('mb-chatbtn')?.classList.remove('active');
     setTimeout(()=>{ if(!drawer.classList.contains('open')) drawer.style.display='none'; }, 320);
   };
   const openDrawer=()=>{
     drawer.style.display='flex';
-    // Force reflow so transition plays
     drawer.offsetHeight;
     drawer.classList.add('open');
     handle.textContent='▼ CLOSE';
+    document.getElementById('mb-chatbtn')?.classList.add('active');
   };
   const toggleDrawer=()=>{
     drawer.classList.contains('open') ? closeDrawer() : openDrawer();
