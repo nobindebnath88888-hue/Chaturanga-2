@@ -1378,7 +1378,7 @@ async function doJoin(){
   try{
     const snap=await get(ref(db2,`rooms/${rid}`));
     if(!snap.exists()){
-      const TIMER_MS=300000; // 5 minutes per player
+      const TIMER_MS=480000; // 8 minutes per player
       await set(ref(db2,`rooms/${rid}`),{
         board:initBoard(),
         currentTurn:'red',turnIndex:0,
@@ -1616,9 +1616,9 @@ function _buildCornerAvatar(avEl, color, name, isElim, isActive, hasJoined){
 }
 
 function _buildCenterTimers(spacerEl, colorL, colorR, timers, ct, turnStartedAt, gameStarted, elim){
-  const TOTAL=300000;
+  const TOTAL=480000;
   const _t=(col)=>{
-    if(!gameStarted) return '5:00';
+    if(!gameStarted) return '8:00';
     const base=timers[col]||TOTAL;
     const used=(ct===col&&turnStartedAt)?Math.max(0,Date.now()-turnStartedAt):0;
     return fmtTime(Math.max(0,base-used));
@@ -1899,11 +1899,11 @@ async function commitMove(move,promo){
   try{
     // Deduct time used this turn from current player's clock
     const now=Date.now();
-    const rawTimers=GS.timers||{red:300000,blue:300000,green:300000,gold:300000};
+    const rawTimers=GS.timers||{red:480000,blue:480000,green:480000,gold:480000};
     const newTimers={...rawTimers};
     if(GS.gameStarted&&GS.turnStartedAt){
       const used=now-GS.turnStartedAt;
-      newTimers[myColor]=Math.max(0,(rawTimers[myColor]||300000)-used);
+      newTimers[myColor]=Math.max(0,(rawTimers[myColor]||480000)-used);
     }
     // Build updated captures map
     const rawCaptures=GS.captures||{};
@@ -2278,7 +2278,7 @@ function fmtTime(ms){
 }
 function updTimers(){
   if(!GS)return;
-  const TOTAL=300000;
+  const TOTAL=480000;
   const raw=GS.timers||{red:TOTAL,blue:TOTAL,green:TOTAL,gold:TOTAL};
   const ct=GS.currentTurn;
   TURN_ORDER.forEach(col=>{
@@ -2288,7 +2288,7 @@ function updTimers(){
       // Game not started yet — show full 5:00 static bar
       el.querySelector('.tbfill').style.width='100%';
       el.querySelector('.tbfill').className='tbfill '+col;
-      el.querySelector('.tbtime').textContent='5:00';
+      el.querySelector('.tbtime').textContent='8:00';
       return;
     }
     const base=raw[col]||TOTAL;
@@ -2551,7 +2551,7 @@ function updPlayers(){
     if(!isElim){
       const tb=document.createElement('div');
       tb.className='timerbar';tb.id='tmr-'+color;
-      tb.innerHTML='<div class="tbtrack"><div class="tbfill '+color+'" style="width:100%"></div></div><span class="tbtime">5:00</span>';
+      tb.innerHTML='<div class="tbtrack"><div class="tbfill '+color+'" style="width:100%"></div></div><span class="tbtime">8:00</span>';
       cont.appendChild(tb);
     }
   });
