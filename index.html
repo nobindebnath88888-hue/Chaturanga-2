@@ -1801,6 +1801,7 @@ async function commitMove(move,promo){
   // Set flag BEFORE write — Firebase local listener fires before await returns
   _justMoved=true;
   setTimeout(()=>{ _justMoved=false; }, 2000);
+  dismissInactivityWarning();
 
   try{
     // Deduct time used this turn from current player's clock
@@ -1896,11 +1897,17 @@ function startTimerTick(){
   },1000);
 }
 
-// ── Inactivity: if it's your turn and you haven't moved in 40s ────
+// ── Inactivity: if it's your turn and you haven't moved in 60s ────
+function dismissInactivityWarning(){
+  const w=document.getElementById('inact-warn');
+  if(w) w.remove();
+}
+
 function resetInactivityWatch(){
   if(_inactInterval) clearInterval(_inactInterval);
+  dismissInactivityWarning();
   if(!GS||!GS.gameStarted||GS.winner||GS.currentTurn!==myColor)return;
-  const INACT_MS=40000;
+  const INACT_MS=60000;
   const started=GS.turnStartedAt||Date.now();
   let warnShown=false;
   _inactInterval=setInterval(()=>{
@@ -1908,7 +1915,7 @@ function resetInactivityWatch(){
     if(elapsed>=INACT_MS){
       clearInterval(_inactInterval);
       doAutoResign(myColor,'inactivity');
-    } else if(elapsed>=INACT_MS-10000&&!warnShown){
+    } else if(elapsed>=INACT_MS-15000&&!warnShown){
       warnShown=true;
       showInactivityWarning(Math.ceil((INACT_MS-elapsed)/1000));
     }
@@ -1923,7 +1930,6 @@ function showInactivityWarning(secs){
     document.querySelector('.bc').appendChild(w);
   }
   w.textContent='⚠ Move in '+secs+'s or auto-resign!';
-  setTimeout(()=>w.remove(),10500);
 }
 
 async function doAutoResign(color,reason){
