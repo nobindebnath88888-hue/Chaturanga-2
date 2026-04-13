@@ -1798,6 +1798,10 @@ async function commitMove(move,promo){
   else if(move.capture) SFX.capture();
   else SFX.move();
 
+  // Set flag BEFORE write — Firebase local listener fires before await returns
+  _justMoved=true;
+  setTimeout(()=>{ _justMoved=false; }, 2000);
+
   try{
     // Deduct time used this turn from current player's clock
     const now=Date.now();
@@ -1841,12 +1845,10 @@ async function commitMove(move,promo){
   }catch(err){
     console.error('Move failed:',err);
     showToast('Move failed: '+(err?.message||'check Firebase rules'));
+    _justMoved=false;
     selSq=null;legals=[];paint();
     return;
   }
-  // Suppress "not your turn" toast for 1.5s after a successful move
-  _justMoved=true;
-  setTimeout(()=>{ _justMoved=false; }, 1500);
   if(winner)showWin(winner);
 }
 
