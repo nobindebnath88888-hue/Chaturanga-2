@@ -209,7 +209,33 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
 .vcpeer{display:flex;align-items:center;gap:4px;font-family:'Cinzel',serif;font-size:9px}
 .vcpeer-dot{width:6px;height:6px;border-radius:50%;background:#506080}
 .vcpeer-dot.live{background:#27ae60;animation:pu .8s ease infinite}
-/* Board corner name labels — outside the canvas */
+/* Corner vote overlay — below the corner avatar, absolute so no layout shift */
+.corner-vote{
+  position:absolute;
+  top:100%;
+  z-index:20;
+  display:none;
+  flex-direction:column;
+  gap:3px;
+  padding:5px 7px;
+  background:rgba(6,12,26,.92);
+  border:1px solid rgba(180,140,50,.35);
+  border-radius:7px;
+  box-shadow:0 4px 16px rgba(0,0,0,.7);
+  min-width:120px;
+  pointer-events:auto;
+}
+.corner-vote.cv-left{left:0}
+.corner-vote.cv-right{right:0}
+.corner-vote.visible{display:flex}
+.cv-label{font-family:'Cinzel',serif;font-size:8px;letter-spacing:.08em;color:#d4a017;margin-bottom:2px;text-transform:uppercase}
+.cv-btns{display:flex;gap:5px}
+.cv-btn{font-family:'Cinzel',serif;font-size:9px;font-weight:700;padding:3px 8px;border-radius:5px;cursor:pointer;border:1px solid;transition:background .12s}
+.cv-btn.yes{background:rgba(39,174,96,.18);border-color:#27ae60;color:#2ecc71}
+.cv-btn.yes:hover{background:rgba(39,174,96,.35)}
+.cv-btn.no{background:rgba(192,57,43,.18);border-color:#c0392b;color:#e74c3c}
+.cv-btn.no:hover{background:rgba(192,57,43,.35)}
+.cv-voted{font-family:'Cinzel',serif;font-size:8px;color:#7080a0;font-style:italic}
 .board-outer{display:flex;flex-direction:column;align-items:stretch;gap:2px}
 /* Corner rows: relative so avatars can be absolute; tall enough for big avatars */
 .board-corner-row{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:46px;padding:0;position:relative;z-index:10;}
@@ -626,6 +652,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
       <div class="corner-spacer" id="cs-top"></div>
       <div class="corner-name-cell" id="cn-tr"></div>
       <div class="corner-avatar ca-right" id="av-tr"></div>
+      <div class="corner-vote cv-left" id="cv-tl"></div>
+      <div class="corner-vote cv-right" id="cv-tr"></div>
      </div>
      <div class="bc" id="board-wrap">
       <canvas id="gc" width="640" height="640"></canvas>
@@ -643,6 +671,8 @@ input[type=text]:focus{border-color:#b8860b;box-shadow:0 0 10px rgba(180,140,50,
       <div class="corner-spacer" id="cs-bot"></div>
       <div class="corner-name-cell" id="cn-br"></div>
       <div class="corner-avatar ca-right" id="av-br"></div>
+      <div class="corner-vote cv-left" id="cv-bl"></div>
+      <div class="corner-vote cv-right" id="cv-br"></div>
      </div>
     </div>
     <div id="si" class="bi" style="opacity:0">&#183;</div>
@@ -1421,6 +1451,10 @@ function enterGame(){
     showToast('Board: '+name);
   });
   document.getElementById('bsdrawbtn')?.addEventListener('click',()=>document.getElementById('drawbtn').click());
+  // Desktop btn-strip proxies
+  document.getElementById('bsrotbtn')?.addEventListener('click',()=>document.getElementById('rotbtn').click());
+  document.getElementById('bsthemebtn')?.addEventListener('click',()=>document.getElementById('themebtn').click());
+  document.getElementById('bsresbtn')?.addEventListener('click',()=>document.getElementById('resbtn').click());
   // Flip layout button
   document.getElementById('bsflip')?.addEventListener('click',()=>{
     const gl=document.querySelector('.gl');
@@ -1616,6 +1650,7 @@ function updCornerNames(){
   const gs=GS.gameStarted;
 
   const AV_ID={tl:'av-tl',tr:'av-tr',bl:'av-bl',br:'av-br'};
+  const CV_ID={tl:'cv-tl',tr:'cv-tr',bl:'cv-bl',br:'cv-br'};
 
   ['tl','tr','bl','br'].forEach(pos=>{
     const cell=document.getElementById('cn-'+pos);
@@ -1629,7 +1664,7 @@ function updCornerNames(){
     _buildCornerCell(cell, color, name, isElim, isActive, hasJoined);
     _buildCornerAvatar(document.getElementById(AV_ID[pos]), color, name, isElim, isActive, hasJoined);
 
-    // Captured pieces (append after avatar+name)
+    // Captured pieces
     const caps=(GS.captures||{})[color]?Object.values(GS.captures[color]):[];
     if(caps.length>0){
       const row=document.createElement('div');
@@ -1650,6 +1685,64 @@ function updCornerNames(){
         row.appendChild(cv);
       });
       cell.appendChild(row);
+    }
+
+    // Vote UI in corner vote div
+    const voteEl=document.getElementById(CV_ID[pos]);
+    if(!voteEl)return;
+    voteEl.innerHTML='';
+    voteEl.classList.remove('visible');
+    if(isElim||GS.winner)return;
+
+    const rv=GS.resignVotes?.[color];
+    const dv=GS.drawVotes?.[color];
+    const activeColors=COLORS.filter(c=>!elim.includes(c));
+
+    if(rv){
+      const yc=Object.entries(rv).filter(([k,v])=>k!=='requestedAt'&&v==='yes').length;
+      const needed=Math.ceil(activeColors.filter(c=>c!==color).length/2);
+      const myVote=rv[myColor];
+      const lbl=document.createElement('div');lbl.className='cv-label';
+      lbl.textContent='⚑ Resign? '+yc+'/'+needed;
+      voteEl.appendChild(lbl);
+      if(color!==myColor&&!elim.includes(myColor)&&!myVote){
+        const btns=document.createElement('div');btns.className='cv-btns';
+        const ya=document.createElement('button');ya.className='cv-btn yes';ya.textContent='✔ Yes';
+        ya.onclick=()=>castResignVote(color,'yes');
+        const na=document.createElement('button');na.className='cv-btn no';na.textContent='✘ No';
+        na.onclick=()=>castResignVote(color,'no');
+        btns.appendChild(ya);btns.appendChild(na);
+        voteEl.appendChild(btns);
+      }else if(myVote){
+        const v=document.createElement('div');v.className='cv-voted';v.textContent='You voted: '+myVote;
+        voteEl.appendChild(v);
+      }else if(color===myColor){
+        const v=document.createElement('div');v.className='cv-voted';v.textContent='Awaiting votes…';
+        voteEl.appendChild(v);
+      }
+      voteEl.classList.add('visible');
+    }else if(dv){
+      const yc=Object.entries(dv).filter(([k,v])=>k!=='requestedAt'&&v==='yes').length;
+      const myVote=dv[myColor];
+      const lbl=document.createElement('div');lbl.className='cv-label';
+      lbl.textContent='½ Draw? '+yc+'/'+activeColors.length;
+      voteEl.appendChild(lbl);
+      if(color!==myColor&&!elim.includes(myColor)&&!myVote){
+        const btns=document.createElement('div');btns.className='cv-btns';
+        const dya=document.createElement('button');dya.className='cv-btn yes';dya.textContent='✔ Yes';
+        dya.onclick=()=>castDrawVote(color,'yes');
+        const dna=document.createElement('button');dna.className='cv-btn no';dna.textContent='✘ No';
+        dna.onclick=()=>castDrawVote(color,'no');
+        btns.appendChild(dya);btns.appendChild(dna);
+        voteEl.appendChild(btns);
+      }else if(myVote){
+        const v=document.createElement('div');v.className='cv-voted';v.textContent='You voted: '+myVote;
+        voteEl.appendChild(v);
+      }else if(color===myColor){
+        const v=document.createElement('div');v.className='cv-voted';v.textContent='Awaiting votes…';
+        voteEl.appendChild(v);
+      }
+      voteEl.classList.add('visible');
     }
   });
 
@@ -1898,9 +1991,12 @@ function startTimerTick(){
 }
 
 // ── Inactivity: if it's your turn and you haven't moved in 60s ────
+let _inactCountdown=null;
+
 function dismissInactivityWarning(){
   const w=document.getElementById('inact-warn');
   if(w) w.remove();
+  if(_inactCountdown){ clearInterval(_inactCountdown); _inactCountdown=null; }
 }
 
 function resetInactivityWatch(){
@@ -1917,19 +2013,30 @@ function resetInactivityWatch(){
       doAutoResign(myColor,'inactivity');
     } else if(elapsed>=INACT_MS-15000&&!warnShown){
       warnShown=true;
-      showInactivityWarning(Math.ceil((INACT_MS-elapsed)/1000));
+      showInactivityWarning(INACT_MS, started);
     }
   },1000);
 }
 
-function showInactivityWarning(secs){
+function showInactivityWarning(totalMs, started){
   let w=document.getElementById('inact-warn');
   if(!w){
     w=document.createElement('div');
     w.id='inact-warn';w.className='inactivity-warn';
     document.querySelector('.bc').appendChild(w);
   }
-  w.textContent='⚠ Move in '+secs+'s or auto-resign!';
+  const update=()=>{
+    const left=Math.max(0, Math.ceil((totalMs-(Date.now()-started))/1000));
+    w.textContent='⚠ Move in '+left+'s or auto-resign!';
+    // Pulse red when ≤5s
+    w.style.background=left<=5?'rgba(180,20,20,.96)':'rgba(231,76,60,.92)';
+  };
+  update();
+  if(_inactCountdown) clearInterval(_inactCountdown);
+  _inactCountdown=setInterval(()=>{
+    if(!document.getElementById('inact-warn')){ clearInterval(_inactCountdown); return; }
+    update();
+  },500);
 }
 
 async function doAutoResign(color,reason){
